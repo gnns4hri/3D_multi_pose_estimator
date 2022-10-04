@@ -196,8 +196,6 @@ class PoseEstimatorDataset(Dataset):
                     
                     if n_loaded % 1000 == 0:
                         print('Loaded', n_loaded, 'of', n_data)
-                    if n_loaded > 10000:
-                        break
             print(f'Given {given}\nTotal {total}')
         elif type(input_data) is dict:
             results_3D = get_3D_from_triangulation(input_data)
