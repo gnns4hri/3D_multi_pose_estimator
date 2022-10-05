@@ -15,7 +15,6 @@ import time
 sys.path.append('./panoptic_model')
 import pose_resnet
 import torchvision.transforms as transforms
-from transforms import get_affine_transform, get_scale
 from string import ascii_lowercase
 from pytransform3d import transformations as pt
 from pytransform3d.transform_manager import TransformManager
@@ -42,11 +41,6 @@ def get_output_from_panoptic_model(img, model):
     tr = transforms.Compose([transforms.ToTensor(), normalize, ])
 
     image_size = (960, 512)
-    height, width, _ = img.shape
-    c = np.array([width / 2.0, height / 2.0])
-    s = get_scale((width, height), image_size)
-    r = 0
-
     img_input = cv2.resize(img, (960, 512))
 
     t = tr(img_input)
@@ -185,6 +179,8 @@ for image in images_info.values():
         continue
 
     cont += 1
+    if cont > 100:
+        break
 
     with open(image['json']) as dfile:
         bframe = json.load(dfile)

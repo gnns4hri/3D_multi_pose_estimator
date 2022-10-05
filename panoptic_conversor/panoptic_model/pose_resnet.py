@@ -204,7 +204,6 @@ class PoseResNet(nn.Module):
 
     def init_weights(self, pretrained=''):
         this_dir = os.path.dirname(__file__)
-        # pretrained = os.path.join(this_dir, '../..', pretrained)
         print('init_weights',pretrained)
         if os.path.isfile(pretrained):
             print('loading pretrained models')
@@ -212,46 +211,7 @@ class PoseResNet(nn.Module):
             logger.info('=> loading pretrained models {}'.format(pretrained))
 
             model_state_dict = self.state_dict()
-            # for k, v in pretrained_state_dict.items():
-            #     if "final_layer" in k:
-            #         pretrained_state_dict[k] = torch.zeros_like(model_state_dict[k])
             self.load_state_dict(pretrained_state_dict, strict=False)
-
-        #     logger.info('=> init deconv weights from normal distribution')
-        #     for name, m in self.deconv_layers.named_modules():
-        #         if isinstance(m, nn.ConvTranspose2d):
-        #             logger.info('=> init {}.weight as normal(0, 0.001)'.format(name))
-        #             logger.info('=> init {}.bias as 0'.format(name))
-        #             nn.init.normal_(m.weight, std=0.001)
-        #             if self.deconv_with_bias:
-        #                 nn.init.constant_(m.bias, 0)
-        #         elif isinstance(m, nn.BatchNorm2d):
-        #             logger.info('=> init {}.weight as 1'.format(name))
-        #             logger.info('=> init {}.bias as 0'.format(name))
-        #             nn.init.constant_(m.weight, 1)
-        #             nn.init.constant_(m.bias, 0)
-        #     logger.info('=> init final conv weights from normal distribution')
-        #     for m in self.final_layer.modules():
-        #         if isinstance(m, nn.Conv2d):
-        #             # nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-        #             logger.info('=> init {}.weight as normal(0, 0.001)'.format(name))
-        #             logger.info('=> init {}.bias as 0'.format(name))
-        #             nn.init.normal_(m.weight, std=0.001)
-        #             nn.init.constant_(m.bias, 0)
-        # else:
-        #     logger.info('=> init weights from normal distribution')
-        #     for m in self.modules():
-        #         if isinstance(m, nn.Conv2d):
-        #             # nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-        #             nn.init.normal_(m.weight, std=0.001)
-        #             # nn.init.constant_(m.bias, 0)
-        #         elif isinstance(m, nn.BatchNorm2d):
-        #             nn.init.constant_(m.weight, 1)
-        #             nn.init.constant_(m.bias, 0)
-        #         elif isinstance(m, nn.ConvTranspose2d):
-        #             nn.init.normal_(m.weight, std=0.001)
-        #             if self.deconv_with_bias:
-        #                 nn.init.constant_(m.bias, 0)
 
 
 resnet_spec = {18: (BasicBlock, [2, 2, 2, 2]),
