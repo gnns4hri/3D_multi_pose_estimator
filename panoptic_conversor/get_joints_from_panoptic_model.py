@@ -185,10 +185,6 @@ for image in images_info.values():
         continue
 
     cont += 1
-    if cont < 1000:
-        continue
-    if cont > 1100:
-        break
 
     with open(image['json']) as dfile:
         bframe = json.load(dfile)

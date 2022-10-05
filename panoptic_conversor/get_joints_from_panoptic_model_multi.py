@@ -17,6 +17,10 @@ import pose_resnet
 import torchvision.transforms as transforms
 from transforms import get_affine_transform, get_scale
 from string import ascii_lowercase
+from pytransform3d import transformations as pt
+from pytransform3d.transform_manager import TransformManager
+import pickle
+
 
 def load_panoptic_model():
     config_file = "./panoptic_model/cfg/prn64_cpn80x80x20_960x512_cam5.yaml"
@@ -44,11 +48,6 @@ def get_output_from_panoptic_model(img, model):
     s = get_scale((width, height), image_size)
     r = 0
 
-    # trans = get_affine_transform(c, s, r, image_size)
-    # img_input = cv2.warpAffine(
-    #     img,
-    #     trans, (int(image_size[0]), int(image_size[1])),
-    #     flags=cv2.INTER_LINEAR)
     img_input = cv2.resize(img, (960, 512))
 
     t = tr(img_input)
@@ -56,8 +55,6 @@ def get_output_from_panoptic_model(img, model):
   
     res = model(t[None, :].to('cuda'))
     res = res.to('cpu')
-
-    # print(res)
 
     return res
 
@@ -112,6 +109,23 @@ for k,cam in cameras.items():
     cam['distCoef'] = np.array(cam['distCoef'])
     cam['R'] = np.matrix(cam['R'])
     cam['t'] = np.array(cam['t']).reshape((3,1))
+
+selected_cameras = dict()
+selected_cameras['trackera'] = cameras[(0,3)]
+selected_cameras['trackerb'] = cameras[(0,6)]
+selected_cameras['trackerc'] = cameras[(0,12)]
+selected_cameras['trackerd'] = cameras[(0,13)]
+selected_cameras['trackere'] = cameras[(0,23)]
+
+# Create cameras' transformations file
+tm = TransformManager()
+
+for cam_name, cam in selected_cameras.items():
+    tr = pt.transform_from(cam['R'], cam['t'][:,0]/100.)
+    tm.add_transform("root", cam_name, tr)
+
+pickle.dump(tm, open('tm_'+seq_name.split('/')[-1]+'.pickle', 'wb'))
+
 
 # Transform coco 19 into coco 18
 id_joint = dict()
@@ -174,12 +188,6 @@ for image in images_info.values():
         continue
 
     cont += 1
-    # if cont < 1000:
-    #     continue
-    # if cont > 1200:
-    #     break
-    
-
     with open(image['json']) as dfile:
         bframe = json.load(dfile)
 
@@ -198,10 +206,7 @@ for image in images_info.values():
 
         panoptic_output = get_output_from_panoptic_model(color_image, model)
 
-        # TODO: get joints' positions from panoptic_output        
         peaks = parse_objects(panoptic_output)
-
-
 
         # Projection from 3D
         joints_3D = dict()
@@ -241,7 +246,7 @@ for image in images_info.values():
                     cv2.putText(ret, "%d" % int(kp), (int(x) + 5, int(y)),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 1)
             projected_people[id_person] = copy.deepcopy(kps)
 
-        # TODO: organize detected joints into separate skeletons according to the their proximity to projected people
+        # Organize detected joints into separate skeletons according to the their proximity to projected people
 
         detected_joints = dict()
         for j, person in enumerate(peaks[0]):
@@ -257,10 +262,10 @@ for image in images_info.values():
                 y = kp[0] * cameras[(0, cam)]['resolution'][1]
                 x = kp[1] * cameras[(0, cam)]['resolution'][0]
                 detected_joints[idx].append([x, y])
-                # if draw:
-                #     cv2.circle(ret, (int(x), int(y)), 1, (0, 255, 0), 2)
-                #     if j!=2:
-                #         cv2.putText(ret, "%d" % int(idx), (int(x) + 5, int(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
+                if draw:
+                    cv2.circle(ret, (int(x), int(y)), 1, (0, 255, 0), 2)
+                    if j!=2:
+                        cv2.putText(ret, "%d" % int(idx), (int(x) + 5, int(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
 
         detected_people = dict()
         for id_person, skeleton in projected_people.items():
@@ -285,20 +290,14 @@ for image in images_info.values():
 
         kps_per_cam[camera_names[cam]] = [json.dumps(bodies_kps), time.time(), 'no_image', bodies_3D]
 
-        for id_person, data in detected_people.items():
-            # cam_name = camera_names[cam]
-            # if not id_person in kps_per_human_and_cam.keys():
-            #     kps_per_human_and_cam[id_person] = dict()
-            # kps_per_human_and_cam[id_person][cam_name] = [json.dumps([data]), time.time(), 'no_image', [joints_3D[id_person]]]    
-            if draw:
+        if draw:
+            for id_person, data in detected_people.items():
                 for idx, joint in data.items():
                     x = joint[1]
                     y = joint[2]
                     cv2.circle(ret, (int(x), int(y)), 1, (0, 255, 0), 2)
                     cv2.putText(ret, "%d" % int(idx), (int(x) + 5, int(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1)
 
-
-        if draw:
             cv2.imshow("test", cv2.resize(ret, dsize=None, fx=1, fy=1))
             if cv2.waitKey(0) % 256 == 27:
                 print("Escape hit, closing...")
