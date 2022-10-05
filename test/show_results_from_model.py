@@ -10,8 +10,6 @@ sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
 from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
 
-# from torch.utils.data import DataLoader
-
 num_features = len(HumanGraphFromView.get_all_features())
 
 if torch.cuda.is_available() is True:
@@ -89,6 +87,7 @@ class Visualizer(object):
         saved = torch.load('../pose_estimator.pytorch', map_location=device)
         self.mlp.load_state_dict(saved['model_state_dict'])
 
+        # Instantiate the skeleton matching model
         params = pickle.load(open('../skeleton_matching.prms', 'rb'))
         self.model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
                 params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)

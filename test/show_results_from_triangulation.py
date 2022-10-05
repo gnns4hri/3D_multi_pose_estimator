@@ -11,8 +11,6 @@ sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
 from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
 
-from torch.utils.data import DataLoader
-
 num_features = len(HumanGraphFromView.get_all_features())
 
 if torch.cuda.is_available() is True:
@@ -111,7 +109,6 @@ class Visualizer(object):
 
 
     def process_data(self):
-        # torch.set_grad_enabled(False)
         self.itert += 1
         if self.itert >= len(self.input_data):
             exit()
