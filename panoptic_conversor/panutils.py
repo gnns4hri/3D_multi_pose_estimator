@@ -1,3 +1,4 @@
+# THIS CODE IS PART OF THE CMU PANOPTIC PROJECT: https://github.com/CMU-Perceptual-Computing-Lab/panoptic-toolbox
 import numpy as np
     
 def projectPoints(X, K, R, t, Kd):
