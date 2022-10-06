@@ -3,19 +3,19 @@
 # Licensed under the MIT License.
 # ------------------------------------------------------------------------------
 
+# This code is part of human_pose_estimation.pytorch: https://github.com/microsoft/human-pose-estimation.pytorch
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import os
-import logging
 
 import torch
 import torch.nn as nn
 
 
 BN_MOMENTUM = 0.1
-logger = logging.getLogger(__name__)
 
 
 def conv3x3(in_planes, out_planes, stride=1):
@@ -123,7 +123,7 @@ class PoseResNet(nn.Module):
 
         self.final_layer = nn.Conv2d(
             in_channels=cfg.POSE_RESNET.NUM_DECONV_FILTERS[-1],
-            out_channels=cfg.NETWORK.NUM_JOINTS,
+            out_channels=cfg.POSE_RESNET.NUM_OUTPUTS,
             kernel_size=cfg.POSE_RESNET.FINAL_CONV_KERNEL,
             stride=1,
             padding=1 if cfg.POSE_RESNET.FINAL_CONV_KERNEL == 3 else 0
@@ -208,7 +208,6 @@ class PoseResNet(nn.Module):
         if os.path.isfile(pretrained):
             print('loading pretrained models')
             pretrained_state_dict = torch.load(pretrained)
-            logger.info('=> loading pretrained models {}'.format(pretrained))
 
             model_state_dict = self.state_dict()
             self.load_state_dict(pretrained_state_dict, strict=False)
@@ -229,6 +228,6 @@ def get_pose_net(cfg, is_train, **kwargs):
     model = PoseResNet(block_class, layers, cfg, **kwargs)
 
     if is_train:
-        model.init_weights(cfg.NETWORK.PRETRAINED_BACKBONE)
+        model.init_weights(cfg.POSE_RESNET.WEIGHTS)
 
     return model

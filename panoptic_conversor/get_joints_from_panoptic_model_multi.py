@@ -12,10 +12,8 @@ from easydict import EasyDict as edict
 import yaml
 import sys
 import time
-sys.path.append('./panoptic_model')
 import pose_resnet
 import torchvision.transforms as transforms
-from transforms import get_affine_transform, get_scale
 from string import ascii_lowercase
 from pytransform3d import transformations as pt
 from pytransform3d.transform_manager import TransformManager
@@ -23,7 +21,7 @@ import pickle
 
 
 def load_panoptic_model():
-    config_file = "./panoptic_model/cfg/prn64_cpn80x80x20_960x512_cam5.yaml"
+    config_file = "./cfg/prn64_cpn80x80x20_960x512_cam5.yaml"
     with open(config_file) as f:
         cfg = edict(yaml.load(f, Loader=yaml.FullLoader))
 
@@ -43,11 +41,6 @@ def get_output_from_panoptic_model(img, model):
     tr = transforms.Compose([transforms.ToTensor(), normalize, ])
 
     image_size = (960, 512)
-    height, width, _ = img.shape
-    c = np.array([width / 2.0, height / 2.0])
-    s = get_scale((width, height), image_size)
-    r = 0
-
     img_input = cv2.resize(img, (960, 512))
 
     t = tr(img_input)
@@ -242,8 +235,11 @@ for image in images_info.values():
                 y = joint[1]
                 kps[int(kp)] = [int(kp), float(x), float(y), 1, 1]
                 if draw:
-                    cv2.circle(ret, (int(x), int(y)), 1, (0, 0, 255), 2)
-                    cv2.putText(ret, "%d" % int(kp), (int(x) + 5, int(y)),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 1)
+                    for idx, joint in data.items():
+                        x = joint[1]
+                        y = joint[2]
+                        cv2.circle(ret, (int(x), int(y)), 1, (0, 0, 255), 2)
+                        cv2.putText(ret, "%d" % int(kp), (int(x) + 5, int(y)),  cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 1)
             projected_people[id_person] = copy.deepcopy(kps)
 
         # Organize detected joints into separate skeletons according to the their proximity to projected people

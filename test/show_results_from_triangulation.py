@@ -101,10 +101,10 @@ class Visualizer(object):
     def init_models(self):
         # Instantiate the skeleton matching model
 
-        params = pickle.load(open('../skeleton_matching.prms', 'rb'))
+        params = pickle.load(open('../models/skeleton_matching.prms', 'rb'))
         self.model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
                 params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-        self.model.load_state_dict(torch.load('../skeleton_matching.tch', map_location=device))
+        self.model.load_state_dict(torch.load('../models/skeleton_matching.tch', map_location=device))
         self.model = self.model.to(device)
 
 

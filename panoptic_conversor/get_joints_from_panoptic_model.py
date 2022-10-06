@@ -12,7 +12,6 @@ from easydict import EasyDict as edict
 import yaml
 import sys
 import time
-sys.path.append('./panoptic_model')
 import pose_resnet
 import torchvision.transforms as transforms
 from string import ascii_lowercase
@@ -21,7 +20,7 @@ from pytransform3d.transform_manager import TransformManager
 import pickle
 
 def load_panoptic_model():
-    config_file = "./panoptic_model/cfg/prn64_cpn80x80x20_960x512_cam5.yaml"
+    config_file = "./cfg/prn64_cpn80x80x20_960x512_cam5.yaml"
     with open(config_file) as f:
         cfg = edict(yaml.load(f, Loader=yaml.FullLoader))
 
@@ -77,7 +76,7 @@ with open('../human_pose.json', 'r') as f:
 topology = trt_pose.coco.coco_category_to_topology(human_pose)
 num_parts = len(human_pose['keypoints'])
 num_links = len(human_pose['skeleton'])
-parse_objects = ParseObjects(topology, cmap_threshold=0.35, link_threshold=0.35)
+parse_objects = ParseObjects(topology, cmap_threshold=0.15, link_threshold=0.15)
 
 draw = False
 
@@ -179,8 +178,6 @@ for image in images_info.values():
         continue
 
     cont += 1
-    if cont > 100:
-        break
 
     with open(image['json']) as dfile:
         bframe = json.load(dfile)
@@ -219,9 +216,12 @@ for image in images_info.values():
 
             kps = dict()
             for i, joint in enumerate(pt):
-                if i == 2 or not valid[i]:
+                if not valid[i]:
                     continue
-                kp = id_joint[i]                    
+                if i!=2:
+                    kp = id_joint[i]
+                else:
+                    kp = '-1'
                 joints_3D[id_person][kp] = [float(skel[0][i]), float(skel[1][i]), float(skel[2][i])]
                 if joint[0] < 0 or joint[0] >= cameras[(0,cam)]['resolution'][0] or joint[1] < 0 or joint[1] >= cameras[(0,cam)]['resolution'][1]:
                     continue

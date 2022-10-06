@@ -95,10 +95,10 @@ INTERVAL = 12
 
 numbers_per_joint = parameters.numbers_per_joint
 
-params = pickle.load(open('../skeleton_matching.prms', 'rb'))
+params = pickle.load(open('../models/skeleton_matching.prms', 'rb'))
 model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
         params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-model.load_state_dict(torch.load('../skeleton_matching.tch', map_location=device))
+model.load_state_dict(torch.load('../models/skeleton_matching.tch', map_location=device))
 model = model.to(device)
 
 

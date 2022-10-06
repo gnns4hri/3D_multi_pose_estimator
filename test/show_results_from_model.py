@@ -84,14 +84,14 @@ class Visualizer(object):
         # Instantiate the MLP
         numbers_per_joint = parameters.numbers_per_joint
         self.mlp = PoseEstimatorMLP(input_dimensions=len(parameters.cameras)*len(parameters.joint_list)*numbers_per_joint, output_dimensions=54)
-        saved = torch.load('../pose_estimator.pytorch', map_location=device)
+        saved = torch.load('../models/pose_estimator.pytorch', map_location=device)
         self.mlp.load_state_dict(saved['model_state_dict'])
 
         # Instantiate the skeleton matching model
-        params = pickle.load(open('../skeleton_matching.prms', 'rb'))
+        params = pickle.load(open('../models/skeleton_matching.prms', 'rb'))
         self.model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
                 params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-        self.model.load_state_dict(torch.load('../skeleton_matching.tch', map_location=device))
+        self.model.load_state_dict(torch.load('../models/skeleton_matching.tch', map_location=device))
         self.model = self.model.to(device)
 
 
