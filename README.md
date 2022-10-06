@@ -13,7 +13,7 @@ Implementation of paper - [Multi-person 3D pose estimation from unlabelled data]
 | Times/ms  |       |
 |:---------:|:-----:|
 | $t_{pp}$  | 40.89 |
-| ${t3Dg}$  | 36.13 |
+| $t_{3Dg}$  | 36.13 |
 | $t_{3Di}$ | 10.62 |
 
 The Mean Per Joint Precision (MPJPE) is 36.66 mm. 
@@ -35,19 +35,20 @@ Then the two networks (matching network and 3D estimator) can be trained separat
 #### Commands for training the skeleton matching network
 ``` shell
 cd skeleton_matching
-python3 train_skeleton_matching.py training_jsons dev_jsons
+python3 train_skeleton_matching.py training_jsons dev_json
 ```
+The *dev_json* file can be created from several json files using the script *merge_jsons.py* in *utils*
 
 #### Commands for training the pose estimator network
 ``` shell
 cd pose_estimator
-python3 train_pose_estimator.py training_jsons dev_jsons
+python3 train_pose_estimator.py training_jsons 
 ```
 
 ## Testing
 
 You need to download the test set of [Panoptic dataset](url to the jsons here) and save it in the project directory.
-Then it is necessary to have the two trained models in the root directory of the project.
+Then it is necessary to have the two trained models in a directory called *models* of the root directory of the project.
 Once everything is set up, from a terminal we move to the test directory:
 
 ``` shell
@@ -57,15 +58,15 @@ cd test
 For getting the metrics and visualize the results from our model you will have to run this two scripts:
 
 ``` shell
-python3 metrics_from_model.py test_files_path
-python3 show_results_from_model.py test_files_path
+python3 metrics_from_model.py test_files test_tm_files
+python3 show_results_from_model.py test_files
 ```
 
 On the other hand, if you want to check the results for only using the triangulation, the scripts are the following:
 
 ``` shell
-python3 metrics_from_triangulation.py test_files_path
-python3 show_results_from_triangulation.py test_files_path
+python3 metrics_from_triangulation.py test_files tm_files
+python3 show_results_from_triangulation.py test_files
 ```
 
 ## Citation
