@@ -26,11 +26,24 @@ To start using the system you just need to clone this repository on your local m
 git clone https://github.com/gnns4hri/3D_multi_pose_estimator.git
 ```
 
+## Dataset generation
+
+The first step to train the system is to generate the dataset. If you want to train the models using the [CMU Panoptic dataset]{http://domedb.perception.cs.cmu.edu/}, download the sequences following the instructions of the [PanopticStudio Toolbox]{https://github.com/CMU-Perceptual-Computing-Lab/panoptic-toolbox}.
+Use the Panoptic toolbox for uncompressing the HD images of the sequences (only the images from the HD cameras 3, 6, 12, 13 and 23 are required).
+Once the images have been uncompressed, you can generate a json file for each sequence using the scripts in *panoptic_conversor*.
+For that,download the backbone model for CMU Panoptic dataset available from the [VoxelPose project]{https://github.com/microsoft/voxelpose-pytorch} and place it in the *panoptic_conversor* directory.
+To generate each training json file, run the following commands:
+
+``` shell
+cd panoptic_conversor
+python3 get_joints_from_panoptic_model.py PANOPTIC_SEQUENCE_DIRECTORY
+```
+
+To generate a json file for test, run the *get_joints_from_panoptic_model_multi.py*. Both scripts generate a json file and a pickle file with the transformation matrices of the cameras. This pickle file is necessary for obtaining metrics of the models.
+ 
 ## Training
 
-First step to train the system is to download the [Panoptic training dataset](url to the jsons here) 
-and save it in the project directory.
-Then the two networks (matching network and 3D estimator) can be trained separately:
+Once the dataset has been generated,  the two networks (matching network and 3D estimator) can be trained separately:
 
 #### Commands for training the skeleton matching network
 ``` shell
@@ -58,14 +71,14 @@ cd test
 For getting the metrics and visualize the results from our model you will have to run this two scripts:
 
 ``` shell
-python3 metrics_from_model.py test_files test_tm_files
+python3 metrics_from_model.py test_files test_tm_files_directory
 python3 show_results_from_model.py test_files
 ```
 
 On the other hand, if you want to check the results for only using the triangulation, the scripts are the following:
 
 ``` shell
-python3 metrics_from_triangulation.py test_files tm_files
+python3 metrics_from_triangulation.py test_files tm_files_directory
 python3 show_results_from_triangulation.py test_files
 ```
 
