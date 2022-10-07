@@ -29,10 +29,10 @@ Install the dependencies in *requirements.txt*
 
 ## Dataset generation
 
-The first step to train the system is to generate the dataset. If you want to train the models using the [CMU Panoptic dataset]{http://domedb.perception.cs.cmu.edu/}, download the sequences following the instructions of the [PanopticStudio Toolbox]{https://github.com/CMU-Perceptual-Computing-Lab/panoptic-toolbox}.
+The first step to train the system is to generate the dataset. If you want to train the models using the [CMU Panoptic dataset](http://domedb.perception.cs.cmu.edu/), download the sequences following the instructions of the [PanopticStudio Toolbox](https://github.com/CMU-Perceptual-Computing-Lab/panoptic-toolbox).
 Use the Panoptic toolbox for uncompressing the HD images of the sequences (only the images from the HD cameras 3, 6, 12, 13 and 23 are required).
 Once the images have been uncompressed, you can generate a json file for each sequence using the scripts in *panoptic_conversor*.
-For that,download the backbone model for CMU Panoptic dataset available from the [VoxelPose project]{https://github.com/microsoft/voxelpose-pytorch} and place it in the *panoptic_conversor* directory.
+For that,download the backbone model for CMU Panoptic dataset available from the [VoxelPose project](https://github.com/microsoft/voxelpose-pytorch) and place it in the *panoptic_conversor* directory.
 To generate each training json file, run the following commands:
 
 ``` shell
