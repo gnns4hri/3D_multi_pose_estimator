@@ -69,7 +69,7 @@ Once everything is set up, from a terminal we move to the test directory:
 cd test
 ```
 
-For getting the metrics and visualize the results from our model you will have to run this two scripts:
+For getting the metrics and visualize the results from our model you will have to run these two scripts:
 
 ``` shell
 python3 metrics_from_model.py test_files test_tm_files_directory
