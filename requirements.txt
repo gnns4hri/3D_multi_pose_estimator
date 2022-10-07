@@ -1,0 +1,11 @@
+dgl==0.6.1
+easydict==1.9
+networkx==2.5.1
+numpy==1.17.4
+pyqtgraph==0.12.2
+pytransform3d==1.9.1
+PyYAML==6.0
+scikit_learn==1.1.2
+scipy==1.8.1
+torch==1.11.0
+torchvision==0.12.0

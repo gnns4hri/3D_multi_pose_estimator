@@ -1,6 +1,6 @@
 # Multi person and multi camara 3D pose estimator
 
-Implementation of paper - [Multi-person 3D pose estimation from unlabelled data](Put a valid url here)
+Implementation of the paper - [Multi-person 3D pose estimation from unlabelled data](Put a valid url here)
 
 ## Performance
 
@@ -25,6 +25,7 @@ To start using the system you just need to clone this repository on your local m
 ``` shell
 git clone https://github.com/gnns4hri/3D_multi_pose_estimator.git
 ```
+Install the dependencies in *requirements.txt*
 
 ## Dataset generation
 
@@ -39,7 +40,7 @@ cd panoptic_conversor
 python3 get_joints_from_panoptic_model.py PANOPTIC_SEQUENCE_DIRECTORY
 ```
 
-To generate a json file for test, run the *get_joints_from_panoptic_model_multi.py*. Both scripts generate a json file and a pickle file with the transformation matrices of the cameras. This pickle file is necessary for obtaining metrics of the models.
+To generate a json file for test, run *get_joints_from_panoptic_model_multi.py* instead of the previous script. Both scripts generate a json file and a Python pickle file with the transformation matrices of the cameras. This pickle file is necessary for obtaining metrics of the models.
  
 ## Training
 
@@ -50,7 +51,7 @@ Once the dataset has been generated,  the two networks (matching network and 3D 
 cd skeleton_matching
 python3 train_skeleton_matching.py training_jsons dev_json
 ```
-The *dev_json* file can be created from several json files using the script *merge_jsons.py* in *utils*
+The *dev_json* file can be created from several json files using the script *merge_jsons.py* in *utils*.
 
 #### Commands for training the pose estimator network
 ``` shell
@@ -60,7 +61,7 @@ python3 train_pose_estimator.py training_jsons
 
 ## Testing
 
-You need to download the test set of [Panoptic dataset](url to the jsons here) and save it in the project directory.
+You need to download the test set of [Panoptic dataset](url to the jsons here) (json and pickle files) and save it in the project directory.
 Then it is necessary to have the two trained models in a directory called *models* of the root directory of the project.
 Once everything is set up, from a terminal we move to the test directory:
 
@@ -75,12 +76,14 @@ python3 metrics_from_model.py test_files test_tm_files_directory
 python3 show_results_from_model.py test_files
 ```
 
-On the other hand, if you want to check the results for only using the triangulation, the scripts are the following:
+On the other hand, if you want to check the results using triangulation instead of the pose estimation model, the scripts are the following:
 
 ``` shell
 python3 metrics_from_triangulation.py test_files tm_files_directory
 python3 show_results_from_triangulation.py test_files
 ```
+
+The four scripts can be run with more than one json file.
 
 ## Citation
 
