@@ -6,9 +6,9 @@ Implementation of the paper - [Multi-person 3D pose estimation from unlabelled d
 
 | Threshold/mm |   25  |   50  |   75  |  100  |  125  |  150  |
 |:------------:|:-----:|:-----:|:-----:|:-----:|:-----:|:-----:|
-|   Recall/%   | 12.96 | 92.08 | 97.50 | 98.70 | 99.26 | 99.49 |
-|  Precision/% | 12.97 | 92.15 | 97.56 | 98.77 | 99.33 | 99.56 |
-|     AP/%     |  3.31 | 87.06 | 96.08 | 97.96 | 98.83 | 99.20 |
+|   Recall/%   | 36.72 | 96.33 | 98.26 | 99.20 | 99.43 | 99.53 |
+|  Precision/% | 36.75 | 96.41 | 98.34 | 99.28 | 99.51 | 99.61 |
+|     AP/%     |  18.66 | 93.82 | 97.13 | 98.71 | 99.12 | 99.27 |
 
 | Times/ms  |       |
 |:---------:|:-----:|
@@ -16,7 +16,7 @@ Implementation of the paper - [Multi-person 3D pose estimation from unlabelled d
 | $t_{3Dg}$  | 36.13 |
 | $t_{3Di}$ | 10.62 |
 
-The Mean Per Joint Precision (MPJPE) is 36.66 mm. 
+The Mean Per Joint Precision (MPJPE) is 29.79 mm. 
 
 ## Installation
 
@@ -61,9 +61,10 @@ python3 train_pose_estimator.py training_jsons
 
 ## Testing
 
-You need to download the test set of [Panoptic dataset](url to the jsons here) (json and pickle files) and save it in the project directory.
+You need to download the test set of [Panoptic dataset](https://www.dropbox.com/sh/9nqgf58foh7f2h0/AAC8iT_VWHKbJDw-UYaS0Emqa?dl=0) (json and pickle files) and save it in the project directory.
 Then it is necessary to have the two trained models in a directory called *models* of the root directory of the project.
-Once everything is set up, from a terminal we move to the test directory:
+The files containing our trained models can be downloaded from [here](https://www.dropbox.com/sh/0fkfe5vvtex9zaa/AACvrfrTDaGgDxAWCJi-lTBna?dl=0)
+Once everything is set up, from a terminal, move to the test directory:
 
 ``` shell
 cd test
