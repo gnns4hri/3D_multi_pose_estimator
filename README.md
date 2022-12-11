@@ -63,7 +63,7 @@ python3 train_pose_estimator.py training_jsons
 
 You need to download the test set of [Panoptic dataset](https://www.dropbox.com/sh/9nqgf58foh7f2h0/AAC8iT_VWHKbJDw-UYaS0Emqa?dl=0) (json and pickle files) and save it in the project directory.
 Then it is necessary to have the two trained models in a directory called *models* of the root directory of the project.
-The files containing our trained models can be downloaded from [here](https://www.dropbox.com/sh/0fkfe5vvtex9zaa/AACvrfrTDaGgDxAWCJi-lTBna?dl=0)
+The files containing our trained models can be downloaded from [here](https://www.dropbox.com/sh/0fkfe5vvtex9zaa/AACvrfrTDaGgDxAWCJi-lTBna?dl=0).
 Once everything is set up, from a terminal, move to the test directory:
 
 ``` shell
