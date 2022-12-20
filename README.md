@@ -89,10 +89,20 @@ The four scripts can be run with more than one json file.
 ## Citation
 
 ```
-@article{,
-  title={},
-  author={},
-  journal={},
-  year={2022}
+@misc{https://doi.org/10.48550/arxiv.2212.08731,
+  doi = {10.48550/ARXIV.2212.08731},
+  
+  url = {https://arxiv.org/abs/2212.08731},
+  
+  author = {Rodriguez-Criado, Daniel and Bachiller, Pilar and Vogiatzis, George and Manso, Luis J.},
+    
+  title = {Multi-person 3D pose estimation from unlabelled data},
+  
+  publisher = {arXiv},
+  
+  year = {2022},
+  
+  copyright = {Creative Commons Attribution 4.0 International}
 }
+
 ```
