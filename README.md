@@ -1,4 +1,4 @@
-# Multi person and multi camara 3D pose estimator
+# Multi person and multi camera 3D pose estimator from unlabelled data
 
 Implementation of the paper - [Multi-person 3D pose estimation from unlabelled data](https://arxiv.org/abs/2212.08731)
 
