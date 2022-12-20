@@ -1,6 +1,6 @@
 # Multi person and multi camara 3D pose estimator
 
-Implementation of the paper - [Multi-person 3D pose estimation from unlabelled data](Put a valid url here)
+Implementation of the paper - [Multi-person 3D pose estimation from unlabelled data](https://arxiv.org/abs/2212.08731)
 
 ## Performance
 
@@ -12,9 +12,9 @@ Implementation of the paper - [Multi-person 3D pose estimation from unlabelled d
 
 | Times/ms  |       |
 |:---------:|:-----:|
-| $t_{pp}$  | 40.89 |
-| $t_{3Dg}$  | 36.13 |
-| $t_{3Di}$ | 10.62 |
+| $t_{pp}$  (time for persons' proposal) | 40.89 |
+| $t_{3Dg}$  (time for 3D pose estimation)| 36.13 |
+| $t_{3Di}$ (time for 3D pose estimation per human)| 10.62 |
 
 The Mean Per Joint Precision (MPJPE) is 29.79 mm. 
 
