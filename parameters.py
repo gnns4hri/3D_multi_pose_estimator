@@ -2,7 +2,7 @@ import sys
 
 from collections import namedtuple
 
-FORMAT = 'COCO'  # 'COCO'  'BODY_25'
+FORMAT = 'COCO'
 
 if FORMAT == 'BODY_25':
     NECK_ID = 1
@@ -17,16 +17,20 @@ elif FORMAT == 'COCO':
 else:
     raise Exception('Format not set correctly in parameters.py!')
 
-USE_PANOPTIC = True
-
-TrackerParameters = namedtuple('TrackerParameters', [
+fields = (
     'tag_size',
     'cameras',
     'camera_names',
+    'widths',
+    'heights',
     'fx',
     'fy',
     'cx',
     'cy',
+    'r_s',
+    'r_w',
+    'c_s',
+    'c_w',
     'kd0',
     'kd1',
     'kd2',
@@ -34,27 +38,34 @@ TrackerParameters = namedtuple('TrackerParameters', [
     'p2',
     'joint_list',
     'numbers_per_joint',
+    'numbers_per_joint_for_loss',
     'transformations_path',
     'used_cameras',
+    'used_cameras_skeleton_matching',
     'used_joints',
+    'min_number_of_views',
     'no3d',
     'draw',
     'format',
     'neck_id',
     'leftshoulder_id',
     'rightshoulder_id',
-    'tracker_sends_only_one_skeleton',
+    'dataset_generator_records_only_one_skeleton',
     'graph_alternative',
     'camera_colours',
     'old_data_to_remove',
     'image_width',
     'image_height'
-])
+)
+
+TrackerParameters = namedtuple('TrackerParameters', fields, defaults=(None,) * len(fields))
+
+CONFIGURATION = 'ARPLAB' # values = {PANOPTIC, ARPLAB}
 
 #
 #  PARAMETERS
 #
-if USE_PANOPTIC:
+if CONFIGURATION == 'PANOPTIC':
     parameters = TrackerParameters(
         image_width=1920,
         image_height=1080,
@@ -71,10 +82,13 @@ if USE_PANOPTIC:
         p1=[-0.00010526, -0.000189415, -0.000119731, 4.22e-05, -0.000448556],
         p2=[6.45495e-05, 0.00107791, 0.000701704, 0.000877748, 0.00062731],
         joint_list=JOINT_LIST,
-        numbers_per_joint=14,  # 1 (joint detected?) 2 (x)  3 (y)  4 (over the threshold?)  5 (certainty)
+        numbers_per_joint=14, 
+        numbers_per_joint_for_loss=4,
         transformations_path='../tm_panoptic.pickle',
         used_cameras=['trackera', 'trackerb', 'trackerc', 'trackerd', 'trackere'],
+        used_cameras_skeleton_matching=['trackera', 'trackerb', 'trackerc', 'trackerd', 'trackere'],
         used_joints = [0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+        min_number_of_views = 2,
         no3d=True,
         draw=True,
         format=FORMAT,
@@ -87,46 +101,56 @@ if USE_PANOPTIC:
                         'trackerd': (127, 127, 0), 'trackere': (0, 127, 127)},
         old_data_to_remove=0.3
     )
-else:
+elif CONFIGURATION == 'ARPLAB':
     F = 848. / 1280.
+    ZEN_F = 720. / 1080.
     parameters = TrackerParameters(
-        image_width=848,
-        image_height=480,
-        cameras=[0, 1, 2, 3],
-        camera_names=['trackera', 'trackerb', 'trackerc', 'trackerd'],
-        tag_size=0.452,  # 0.313,
-        # fx  =              [424.86101478, 424.08621444, 425.35061892, 425.43102505],
-        # fy  =              [425.31913919, 424.35178743, 425.92296923, 425.84745869],
-        # cx =               [420.07507557, 420.53503877, 421.15377069, 420.93675768],
-        # cy =               [237.26322826, 239.09107219, 245.26624895, 240.66948926],
-        kd0=[0., 0., 0., 0.],
-        kd1=[0., 0., 0., 0.],
-        kd2=[0., 0., 0., 0.],
-        p1=[0., 0., 0., 0.],
-        p2=[0., 0., 0., 0.],
+        image_width=1280,
+        image_height=720,
+        cameras=[0, 1, 2, 3, 4, 5],
+        camera_names=['trackera', 'trackerb', 'trackerc', 'trackerd', 'orinbot_l', 'orinbot_r'], 
+        tag_size=0.452,
+        kd0=[0., 0., 0., 0., 0., 0., 0.],
+        kd1=[0., 0., 0., 0., 0., 0., 0.],
+        kd2=[0., 0., 0., 0., 0., 0., 0.],
+        p1=[0., 0., 0., 0., 0., 0., 0.],
+        p2=[0., 0., 0., 0., 0., 0., 0.],
 
-        fx=[634.0370 * F, 633.6757 * F, 636.5411 * F, 635.4050 * F],
-        fy=[633.5662 * F, 633.0649 * F, 636.1349 * F, 634.5941 * F],
-        cx=[631.7626 * F, 635.7685 * F, 638.4467 * F, 638.3454 * F],
-        cy=[355.3067 * F, 358.7285 * F, 370.3130 * F, 362.9503 * F],
+        widths=[1280,        1280,              1280,            1280,      1280,          1280],
+        heights=[720,         720,               720,             720,      720,           720],
+        fx=[634.0370 * F, 633.6757 * F, 636.5411 * F, 635.4050 * F, 1097.2998046875*ZEN_F,   1097.2998046875*ZEN_F],
+        fy=[633.5662 * F, 633.0649 * F, 636.1349 * F, 634.5941 * F, 1097.2998046875*ZEN_F,   1097.2998046875*ZEN_F],
+        cx=[631.7626 * F, 635.7685 * F, 638.4467 * F, 638.3454 * F, 953.3253173828125*ZEN_F, 953.3253173828125*ZEN_F],
+        cy=[355.3067 * F, 358.7285 * F, 370.3130 * F, 362.9503 * F, 553.707763671875*ZEN_F,  553.707763671875*ZEN_F],
+
+        r_s=[0,                0,                 0,               0,         0,             0],
+        r_w=[720,            720,               720,             720,       720,           720],
+        c_s=[0,                0,                 0,              0,         0,              0],
+        c_w=[1280,          1280,              1280,            1280,       1280,          1280],
 
         joint_list=JOINT_LIST,
         numbers_per_joint=14,  # 1 (joint detected?) 2 (x)  3 (y)  4 (over the threshold?)  5 (certainty)
-        transformations_path='../tm.pickle',
-        used_cameras=['trackera', 'trackerb', 'trackerc', 'trackerd'],
+        numbers_per_joint_for_loss=4,  # 1 (joint detected?) 2 (x)  3 (y)  4 (over the threshold?)  5 (certainty)
+        transformations_path='../tm_new.pickle',
+        used_cameras=['trackera', 'trackerb', 'trackerc', 'trackerd', 'orinbot_l', 'orinbot_r'],
+        used_cameras_skeleton_matching = ['trackera', 'trackerb', 'trackerc', 'trackerd', 'orinbot_l', 'orinbot_r'],
         used_joints = [x for x in range(18)],
+        min_number_of_views = 1,
         no3d=True,
         draw=True,
         format=FORMAT,
         neck_id=NECK_ID,
         leftshoulder_id=LEFTSHOULDER_ID,
         rightshoulder_id=RIGHTSHOULDER_ID,
-        tracker_sends_only_one_skeleton=True,
+        dataset_generator_records_only_one_skeleton=False,
         graph_alternative='3',
-        camera_colours={'trackera': (255, 0, 0), 'trackerb': (0, 255, 0), 'trackerc': (0, 0, 255),
-                        'trackerd': (127, 127, 0)},
-        old_data_to_remove=0.3
+        camera_colours={'trackera': (255, 0, 0), 'trackerb': (20, 150, 20), 'trackerc': (0, 255, 0), 'trackerd': (0, 0, 255),
+                        'orinbot_l': (0, 100, 160), 'orinbot_r': (0, 160, 100)},
+        old_data_to_remove=0.08
     )
+else:
+    print('NO VALID CONFIGURATION')
+    exit()
 
 #
 #  ASSERTS
