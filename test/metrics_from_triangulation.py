@@ -95,10 +95,10 @@ INTERVAL = 12
 
 numbers_per_joint = parameters.numbers_per_joint
 
-params = pickle.load(open('../models/skeleton_matching.prms', 'rb'))
+params = pickle.load(open('../models/slmodel_5cams_panoptic.prms', 'rb'))
 model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
         params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-model.load_state_dict(torch.load('../models/skeleton_matching.tch', map_location=device))
+model.load_state_dict(torch.load('../models/slmodel_5cams_panoptic.tch', map_location=device))
 model = model.to(device)
 
 
@@ -201,6 +201,7 @@ for file in TEST_FILES:
 
             try:
                 subgraph = scenario.graphs[0].to(device)
+                labels = scenario.labels[0].to(device)                
                 indices = scenario.data['edge_nodes_indices'][0].to(device)
                 nodes_camera = scenario.data['nodes_camera'][0]
                 feats = subgraph.ndata['h'].to(device)
@@ -209,12 +210,13 @@ for file in TEST_FILES:
                 for layer in model.layers:
                     layer.g = subgraph
                 outputs = torch.squeeze(model(feats.float(), subgraph))
-
+                
+                labels = torch.squeeze(labels).to('cpu')
                 indices = torch.squeeze(indices).to('cpu')
             except:
                 continue
 
-            final_output = get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, CLASSIFICATION_THRESHOLD)
+            final_output = get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, scenario.jsons_for_head, CLASSIFICATION_THRESHOLD)
             # END OF GRAPH MATCHING
 
             time_GM_i = time.time() - time_ini
@@ -270,7 +272,7 @@ for file in TEST_FILES:
                 err = 0.
                 njoints = 0
                 total_joints = len(parameters.used_joints)
-                for j in range(number_of_joints):
+                for j in parameters.used_joints:
                     idx = str(j)
                     if idx in result3D:
                         x3D[j] = result3D[idx][0][0]
