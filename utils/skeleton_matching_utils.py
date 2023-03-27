@@ -1,15 +1,15 @@
 import networkx as nx
 import sys
 
-sys.path.append('../skeleton_matching')
-from graph_generator import HumanGraphFromView
+sys.path.append('../')
+from parameters import parameters 
 
 from collections import namedtuple
 from operator import itemgetter
 Matching = namedtuple('Matching', 'id nodes score')
 
 
-def get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, CLASSIFICATION_THRESHOLD):
+def get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, jsons_for_head=None, CLASSIFICATION_THRESHOLD=0.5):
     #
     #
     # Process the output graph as it comes from the GNN
@@ -24,7 +24,10 @@ def get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_ca
     head_original_camera = dict()     # A dictionary with head nodes as keys holding in which camera it is
     # Code
     src, dst = [x.tolist() for x in subgraph.edges()]
-    output_features = outputs.tolist()
+    if type(outputs) is not list:
+        output_features = outputs.tolist()
+    else:
+        output_features = outputs
 
     for link_i in range(len(src)):
         link_src = src[link_i]
@@ -114,14 +117,16 @@ def get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_ca
     final_output = []
     cc = nx.connected_components(G)
     for component in cc:
-        if len(component) < 2:
+        if len(component) < parameters.min_number_of_views:
             continue
         
         person = dict()
-        for cam in HumanGraphFromView.get_cam_types():
+        person_valid = []
+        for cam in parameters.used_cameras_skeleton_matching:
             person[cam] = None
         for component_item in component:
             person[G.nodes[component_item]["camera"]] = component_item
+
         final_output.append(person)
 
     return final_output
