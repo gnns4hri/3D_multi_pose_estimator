@@ -60,7 +60,7 @@ fields = (
 
 TrackerParameters = namedtuple('TrackerParameters', fields, defaults=(None,) * len(fields))
 
-CONFIGURATION = 'ARPLAB' # values = {PANOPTIC, ARPLAB}
+CONFIGURATION = 'PANOPTIC' # values = {PANOPTIC, ARPLAB}
 
 #
 #  PARAMETERS
@@ -95,7 +95,6 @@ if CONFIGURATION == 'PANOPTIC':
         neck_id=NECK_ID,
         leftshoulder_id=LEFTSHOULDER_ID,
         rightshoulder_id=RIGHTSHOULDER_ID,
-        tracker_sends_only_one_skeleton=True,
         graph_alternative='3',
         camera_colours={'trackera': (255, 0, 0), 'trackerb': (0, 255, 0), 'trackerc': (0, 0, 255),
                         'trackerd': (127, 127, 0), 'trackere': (0, 127, 127)},

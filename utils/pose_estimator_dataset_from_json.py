@@ -23,7 +23,7 @@ MAX_COMBINATIONS_NUMBER = 5
 sys.path.append('../')
 from parameters import parameters 
 
-from tracker_utils import camera_matrix
+from pose_estimator_utils import camera_matrix
 
 tm = pickle.load(open(parameters.transformations_path, 'rb'))
 camera_i_transforms = []
