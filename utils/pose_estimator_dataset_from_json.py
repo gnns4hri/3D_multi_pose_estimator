@@ -222,11 +222,10 @@ class PoseEstimatorDataset(Dataset):
                             self.data.append(network_input_DA)
                             self.orig_data.append(error_input)
 
-                        n_loaded += 1                        
-                   
+                        n_loaded += 1      
+                  
                         if n_loaded % 1000 == 0:
                             print('Loaded', n_loaded, 'of', n_data)
-                        
                     
             print(f'Given {given}\nTotal {total}')
         elif type(input_data) is dict:
