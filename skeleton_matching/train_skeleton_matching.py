@@ -227,7 +227,7 @@ for epoch in range(0, epochs):
                 min_dev_loss = best_loss
 
             # Save the model
-            torch.save(model.state_dict(), 'slmodel.tch')
+            torch.save(model.state_dict(), 'skeleton_matching.tch')
             params = {'loss': batch_loss,
                       'net': 'gat',
                       'gnn_layers': gnn_layers,
@@ -243,7 +243,7 @@ for epoch in range(0, epochs):
                       'alpha': alpha,
                       'residual': residual
                       }
-            pickle.dump(params, open('slmodel.prms', 'wb'))
+            pickle.dump(params, open('skeleton_matching.prms', 'wb'))
             cur_step = 0
         else:
             cur_step += 1
@@ -253,7 +253,7 @@ for epoch in range(0, epochs):
 time_a = time.time()
 test_score_list = []
 valid_score_list = []
-model.load_state_dict(torch.load('slmodel.tch', map_location=device))
+model.load_state_dict(torch.load('skeleton_matching.tch', map_location=device))
 
 for check in ['test', 'dev']:
     if check == 'test':
