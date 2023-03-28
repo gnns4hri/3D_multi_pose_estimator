@@ -2,7 +2,7 @@ import sys
 import torch
 import pickle
 import json
-
+import copy
 import cv2
 import numpy as np
 import networkx as nx
@@ -42,6 +42,18 @@ for cam_idx, cam in enumerate(parameters.camera_names):
     distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.p1[cam_idx], parameters.p2[cam_idx], parameters.kd2[cam_idx]])
     projection = trfm[0:3, :]
     projection_matrices[cam] = projection
+
+SHOW_GT = True
+
+if SHOW_GT:
+    camera_i_transforms = []
+    tm_dataset = pickle.load(open(sys.argv[2], 'rb'))
+    dataset_camera_d_transforms = []
+    for cam_idx, cam in enumerate(parameters.camera_names):
+        trfm_model = tm.get_transform(parameters.camera_names[cam_idx], "root")
+        camera_i_transforms.append(torch.from_numpy(trfm_model).type(torch.float32))
+        trfm_dataset = tm_dataset.get_transform("root", parameters.camera_names[cam_idx])
+        dataset_camera_d_transforms.append(torch.from_numpy(trfm_dataset).type(torch.float32))
 
 
 with open("../human_pose.json", 'r') as f:
@@ -101,10 +113,10 @@ class Visualizer(object):
     def init_models(self):
         # Instantiate the skeleton matching model
 
-        params = pickle.load(open('../models/skeleton_matching.prms', 'rb'))
+        params = pickle.load(open('../models/slmodel_5cams_panoptic.prms', 'rb'))
         self.model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
                 params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-        self.model.load_state_dict(torch.load('../models/skeleton_matching.tch', map_location=device))
+        self.model.load_state_dict(torch.load('../models/slmodel_5cams_panoptic.tch', map_location=device))
         self.model = self.model.to(device)
 
 
@@ -144,19 +156,90 @@ class Visualizer(object):
 
         indices = torch.squeeze(indices).to(device)
 
-        final_output = get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, CLASSIFICATION_THRESHOLD)
-
-        #
-        #
-        # Get 3D from triangulation
-        #
-        #
-
+        final_output = get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, scenario.jsons_for_head, CLASSIFICATION_THRESHOLD)
 
         lines = []
         points = []
         points_pid = []
         lines_pid = []
+
+        ################### Show ground truth ###################
+
+        if SHOW_GT:
+            first_cam = list(input_element.keys())[0]
+            if len(input_element[first_cam]) != 4:
+                print("There is no ground truth in the specified file")
+                exit()
+
+            for c in input_element:
+                if len(input_element[c][3]) >  len(input_element[first_cam][3]):
+                    first_cam = c
+
+            
+            if len(input_element[first_cam][3]) == 0:
+                return
+
+            joints_3D_all = input_element[first_cam][3]
+
+            GT_3D = []
+
+            for joints_3D in joints_3D_all:
+            
+                GT_3D_torch = torch.zeros(len(parameters.joint_list)*3)
+
+                for j in parameters.joint_list:
+                    idx = str(j)
+                    if idx in joints_3D:
+                        GT_3D_torch[j*3: j*3 + 3] = torch.tensor(np.array(joints_3D[idx])/100.)
+
+                GT_3D_torch = GT_3D_torch.reshape((len(parameters.joint_list), 3)).transpose(0,1)
+
+                ones = torch.ones(1, GT_3D_torch.shape[1])
+
+                TR_dataset = dataset_camera_d_transforms[1]
+                TRi = camera_i_transforms[1]
+                from_camera = torch.matmul(TR_dataset, torch.cat((GT_3D_torch, ones), 0))
+                to_world = torch.transpose(torch.matmul(TRi, from_camera)[:-1][:], 0, 1)
+
+                GT_3D_person = {}
+                for j in parameters.joint_list:
+                    idx = str(j)
+                    if idx in joints_3D:
+                        GT_3D_person[idx] = to_world[j].numpy()
+
+                GT_3D.append(copy.deepcopy(GT_3D_person))
+
+            for person_id, person in enumerate(GT_3D):
+                number_of_joints = len(parameters.joint_list)
+                x3D = np.zeros(number_of_joints)
+                y3D = np.zeros(number_of_joints)
+                z3D = np.zeros(number_of_joints)
+
+                for j in range(number_of_joints):
+                    idx = str(j)
+                    if idx in person and j in parameters.used_joints:
+                        x3D[j] = person[idx][0]
+                        z3D[j] = -person[idx][1]
+                        y3D[j] = person[idx][2] #+ 2.
+
+
+                for idx in range(len(skeleton)):
+                    line_x3D = []
+                    line_y3D = []
+                    line_z3D = []
+                    if skeleton[idx][0]-1 in parameters.used_joints and skeleton[idx][1]-1 in parameters.used_joints:
+                        if str(skeleton[idx][0]-1) in person.keys() and str(skeleton[idx][1]-1) in person.keys():
+                            line_x3D.append(x3D[skeleton[idx][0]-1])
+                            line_y3D.append(y3D[skeleton[idx][0]-1])
+                            line_z3D.append(z3D[skeleton[idx][0]-1])
+                            line_x3D.append(x3D[skeleton[idx][1]-1])
+                            line_y3D.append(y3D[skeleton[idx][1]-1])
+                            line_z3D.append(z3D[skeleton[idx][1]-1])
+                            lines.append((line_x3D, line_y3D, line_z3D))
+                            lines_pid.append(6)                        
+
+        ################### Get 3D from triangulation ###################
+
         for person_id, person in enumerate(final_output):
 
             # Organize the points considering the different views
@@ -241,7 +324,7 @@ class Visualizer(object):
             QtGui.QApplication.instance().exec_()
 
     def update_step(self, points, lines, points_pid, lines_pid):
-        color_list = ['r', 'g', 'b', 'm', 'c', 'y', 'k']
+        color_list = ['r', 'g', 'b', 'm', 'c', 'y', 'd']
         colors = []
         for pid in points_pid:
             colors.append(pg.glColor(color_list[pid]))
@@ -273,9 +356,11 @@ class Visualizer(object):
         self.timer.start(self.period)
         self.start()
 
+if SHOW_GT:
+    json_list = sys.argv[1:-1]
+else:
+    json_list = sys.argv[1:]
 
-v = Visualizer(PLOTPERIOD, sys.argv[1:])
+v = Visualizer(PLOTPERIOD, json_list)
 v.animation()
-
-
 

@@ -2,9 +2,8 @@ import sys
 import torch
 import pickle
 import json
-
+import copy
 import numpy as np
-import networkx as nx
 
 sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
@@ -39,6 +38,20 @@ from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph.opengl as gl
 import pyqtgraph as pg
 import numpy as np
+
+SHOW_GT = True
+
+if SHOW_GT:
+    tm = pickle.load(open(parameters.transformations_path, 'rb'))
+    camera_i_transforms = []
+    tm_dataset = pickle.load(open(sys.argv[2], 'rb'))
+    dataset_camera_d_transforms = []
+    for cam_idx, cam in enumerate(parameters.camera_names):
+        trfm_model = tm.get_transform(parameters.camera_names[cam_idx], "root")
+        camera_i_transforms.append(torch.from_numpy(trfm_model).type(torch.float32))
+        trfm_dataset = tm_dataset.get_transform("root", parameters.camera_names[cam_idx])
+        dataset_camera_d_transforms.append(torch.from_numpy(trfm_dataset).type(torch.float32))
+
 
 class Visualizer(object):
     def __init__(self, period, json_files):
@@ -84,14 +97,15 @@ class Visualizer(object):
         # Instantiate the MLP
         numbers_per_joint = parameters.numbers_per_joint
         self.mlp = PoseEstimatorMLP(input_dimensions=len(parameters.cameras)*len(parameters.joint_list)*numbers_per_joint, output_dimensions=54)
-        saved = torch.load('../models/pose_estimator.pytorch', map_location=device)
+        saved = torch.load('../models/save_with_robot_5_5_panoptic.pytorch', map_location=device)
         self.mlp.load_state_dict(saved['model_state_dict'])
+        self.mlp = self.mlp.to(device)
 
         # Instantiate the skeleton matching model
-        params = pickle.load(open('../models/skeleton_matching.prms', 'rb'))
+        params = pickle.load(open('../models/slmodel_5cams_panoptic.prms', 'rb'))
         self.model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
                 params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-        self.model.load_state_dict(torch.load('../models/skeleton_matching.tch', map_location=device))
+        self.model.load_state_dict(torch.load('../models/slmodel_5cams_panoptic.tch', map_location=device))
         self.model = self.model.to(device)
 
 
@@ -101,58 +115,168 @@ class Visualizer(object):
             exit()
 
         input_element = self.input_data[self.itert]
-        processed_input = dict()
-        for cam in input_element:
-            data = json.loads(input_element[cam][0])
-            cam_data = []
-            for s in data:
-                cam_data.append(s)
-            if cam_data:
-                processed_input[cam] = []
-                processed_input[cam].append(json.dumps(cam_data))
-                processed_input[cam].append(input_element[cam][1])
+        if len(parameters.used_cameras)>1:
+            processed_input = dict()
+            for cam in input_element:
+                data = json.loads(input_element[cam][0]) #input_element[cam][0]#
+                cam_data = []
+                for s in data:
+                    # if len(list(s.keys()))>5:
+                    # if str(parameters.neck_id) in s.keys():
+                    cam_data.append(s)
+                if cam_data:
+                    processed_input[cam] = []
+                    processed_input[cam].append(json.dumps(cam_data))
+                    processed_input[cam].append(input_element[cam][1])
 
-        
-        scenario = MergedMultipleHumansDataset(processed_input, mode='test', limit=10000, debug=True, alt=parameters.graph_alternative, verbose=False)
+            
+            scenario = MergedMultipleHumansDataset(processed_input, mode='test', limit=10000, debug=True, alt=parameters.graph_alternative, verbose=False)
 
-        if len(scenario.graphs)==0:
-            print('empty scenario')
-            return
+            if len(scenario.graphs)==0:
+                print('empty scenario')
+                return
 
-        subgraph = scenario.graphs[0].to(device)
-        indices = scenario.data['edge_nodes_indices'][0].to(device)
-        nodes_camera = scenario.data['nodes_camera'][0]
-        feats = subgraph.ndata['h'].to(device)
+            subgraph = scenario.graphs[0].to(device)
+            labels = scenario.labels[0].to(device)
+            indices = scenario.data['edge_nodes_indices'][0].to(device)
+            nodes_camera = scenario.data['nodes_camera'][0]
+            feats = subgraph.ndata['h'].to(device)
 
-        self.model.g = subgraph
-        for layer in self.model.layers:
-            layer.g = subgraph
-        outputs = torch.squeeze(self.model(feats.float(), subgraph))
+            self.model.g = subgraph
+            for layer in self.model.layers:
+                layer.g = subgraph
+            outputs = torch.squeeze(self.model(feats.float(), subgraph))
 
-        indices = torch.squeeze(indices).to('cpu')
+            labels = torch.squeeze(labels).to('cpu')#.to(device, dtype=torch.float32)
+            indices = torch.squeeze(indices).to('cpu')#.to(device)
 
-        final_output = get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, CLASSIFICATION_THRESHOLD)
+            # Process the output graph as it comes from the GNN
+            final_output = get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, scenario.jsons_for_head, CLASSIFICATION_THRESHOLD)
+        else:
+            cam = parameters.used_cameras[0]
+            joints_json = input_element[cam][0]
+            skeletons = json.loads(joints_json)
+            final_output = []
+            for sk in skeletons:
+                # if len(sk) < 3:
+                #     continue
+                person = dict()
+                person[cam] = list()
+                person[cam].append(json.dumps([sk]))
+                person[cam] += input_element[cam][1:]
+                final_output.append(person)
 
         lines = []
         points = []
         points_pid = []
         lines_pid = []
+
+        ################### Show ground truth ###################
+
+        if SHOW_GT:
+            first_cam = list(input_element.keys())[0]
+            if len(input_element[first_cam]) != 4:
+                print("There is no ground truth in the specified file")
+                exit()
+
+            for c in input_element:
+                if len(input_element[c][3]) >  len(input_element[first_cam][3]):
+                    first_cam = c
+
+            
+            if len(input_element[first_cam][3]) == 0:
+                return
+
+            joints_3D_all = input_element[first_cam][3]
+
+            GT_3D = []
+
+            for joints_3D in joints_3D_all:
+            
+                GT_3D_torch = torch.zeros(len(parameters.joint_list)*3)
+
+                for j in parameters.joint_list:
+                    idx = str(j)
+                    if idx in joints_3D:
+                        GT_3D_torch[j*3: j*3 + 3] = torch.tensor(np.array(joints_3D[idx])/100.)
+
+                GT_3D_torch = GT_3D_torch.reshape((len(parameters.joint_list), 3)).transpose(0,1)
+
+                ones = torch.ones(1, GT_3D_torch.shape[1])
+
+                TR_dataset = dataset_camera_d_transforms[1]
+                TRi = camera_i_transforms[1]
+                from_camera = torch.matmul(TR_dataset, torch.cat((GT_3D_torch, ones), 0))
+                to_world = torch.transpose(torch.matmul(TRi, from_camera)[:-1][:], 0, 1)
+
+                GT_3D_person = {}
+                for j in parameters.joint_list:
+                    idx = str(j)
+                    if idx in joints_3D:
+                        GT_3D_person[idx] = to_world[j].numpy()
+
+                GT_3D.append(copy.deepcopy(GT_3D_person))
+
+            for person_id, person in enumerate(GT_3D):
+                number_of_joints = len(parameters.joint_list)
+                x3D = np.zeros(number_of_joints)
+                y3D = np.zeros(number_of_joints)
+                z3D = np.zeros(number_of_joints)
+
+                for j in range(number_of_joints):
+                    idx = str(j)
+                    if idx in person and j in parameters.used_joints:
+                        x3D[j] = person[idx][0]
+                        z3D[j] = -person[idx][1]
+                        y3D[j] = person[idx][2] #+ 2.
+
+
+                for idx in range(len(skeleton)):
+                    line_x3D = []
+                    line_y3D = []
+                    line_z3D = []
+                    if skeleton[idx][0]-1 in parameters.used_joints and skeleton[idx][1]-1 in parameters.used_joints:
+                        if str(skeleton[idx][0]-1) in person.keys() and str(skeleton[idx][1]-1) in person.keys():
+                            line_x3D.append(x3D[skeleton[idx][0]-1])
+                            line_y3D.append(y3D[skeleton[idx][0]-1])
+                            line_z3D.append(z3D[skeleton[idx][0]-1])
+                            line_x3D.append(x3D[skeleton[idx][1]-1])
+                            line_y3D.append(y3D[skeleton[idx][1]-1])
+                            line_z3D.append(z3D[skeleton[idx][1]-1])
+                            lines.append((line_x3D, line_y3D, line_z3D))
+                            lines_pid.append(6)                        
+
+        ################### Get and show estimation ###################
+
+        batched_input = []        
         for person_id, person in enumerate(final_output):
 
-            raw_input = dict()
-            for cam_idx in parameters.cameras:
-                camera = parameters.camera_names[cam_idx]
-                if person[camera] is not None:
-                    pc = person[camera]
-                    all_joints_data = [scenario.jsons_for_head[pc]]
-                    raw_input[camera] = [json.dumps(all_joints_data)]
+            if len(parameters.used_cameras)>1:
+                raw_input = dict()
+                for cam_idx, camera in enumerate(parameters.used_cameras):
+                    if person[camera] is not None:
+                        pc = person[camera]
+                        all_joints_data = [scenario.jsons_for_head[pc]]
+                        raw_input[camera] = [json.dumps(all_joints_data)]
+            else:
+                raw_input = person
+                for cam in raw_input:
+                    all_joints_data = json.loads(raw_input[cam][0])
+
+            if not raw_input:
+                continue
 
             inputs = PoseEstimatorDataset(raw_input, parameters.cameras, parameters.joint_list, save=False)
-            inputs = inputs[0][0].reshape([1, inputs[0][0].size()[0]])
+            inputs = inputs[0][0].reshape([1, inputs[0][0].size()[0]]).to(device)
+            batched_input.append(inputs)       
 
-            outputs = self.mlp(inputs)
+        # GET the 3D skeleton of all the detected persons
+        input_all = torch.cat(batched_input, dim=0)
+        output_all = self.mlp(input_all.to(device))
 
-            results_3d = torch.squeeze(outputs)*10.
+        for person_id in range(output_all.shape[0]):
+            results_3d = torch.squeeze(output_all[person_id])*10.
+            results_3d = results_3d.to('cpu')
 
             x3D = results_3d[::3]
             z3D = -results_3d[1::3]
@@ -193,7 +317,7 @@ class Visualizer(object):
             QtGui.QApplication.instance().exec_()
 
     def update_step(self, points, lines, points_pid, lines_pid):
-        color_list = ['r', 'g', 'b', 'm', 'c', 'y', 'k']
+        color_list = ['r', 'g', 'b', 'm', 'c', 'y', 'd']
         colors = []
         for pid in points_pid:
             colors.append(pg.glColor(color_list[pid]))
@@ -226,6 +350,11 @@ class Visualizer(object):
         self.start()
 
 
-v = Visualizer(PLOTPERIOD, sys.argv[1:])
+if SHOW_GT:
+    json_list = sys.argv[1:-1]
+else:
+    json_list = sys.argv[1:]
+
+v = Visualizer(PLOTPERIOD, json_list)
 v.animation()
 
