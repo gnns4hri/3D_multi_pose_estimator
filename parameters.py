@@ -60,7 +60,7 @@ fields = (
 
 TrackerParameters = namedtuple('TrackerParameters', fields, defaults=(None,) * len(fields))
 
-CONFIGURATION = 'PANOPTIC' # values = {PANOPTIC, ARPLAB}
+CONFIGURATION = 'ARPLAB' # values = {PANOPTIC, ARPLAB}
 
 #
 #  PARAMETERS

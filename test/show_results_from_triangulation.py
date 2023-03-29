@@ -11,7 +11,7 @@ sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
 from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
 
-parser = argparse.ArgumentParser(description='Print accuracy and time metrics of skeleton-matching ans pose estimation models (CMU Panoptic only)')
+parser = argparse.ArgumentParser(description='Display 3D multi-pose results using triangulation')
 
 parser.add_argument('--testfile', type=str, nargs=1, required=True, help='Test file used as input')
 parser.add_argument('--showgt', action='store_true', help='Show ground truth')

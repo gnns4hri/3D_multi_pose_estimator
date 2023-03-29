@@ -40,7 +40,7 @@ sys.path.append('../')
 from parameters import parameters 
 
 
-parser = argparse.ArgumentParser(description='Print accuracy and time metrics of skeleton-matching ans pose estimation models (CMU Panoptic only)')
+parser = argparse.ArgumentParser(description='Print accuracy and time metrics of skeleton-matching and pose estimation models (CMU Panoptic only)')
 
 parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='List of json files used as input')
 parser.add_argument('--tmdir', type=str, nargs=1,required=True, help='Directory that contains the files with the transfomation matrices')
