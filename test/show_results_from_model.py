@@ -4,10 +4,30 @@ import pickle
 import json
 import copy
 import numpy as np
+import argparse
 
 sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
 from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
+
+parser = argparse.ArgumentParser(description='Print accuracy and time metrics of skeleton-matching ans pose estimation models (CMU Panoptic only)')
+
+parser.add_argument('--testfile', type=str, nargs=1, required=True, help='Test file used as input')
+parser.add_argument('--showgt', action='store_true', help='Show ground truth')
+parser.add_argument('--tmfile', type=str, nargs=1, help='Directory that contains the files with the transfomation matrices')
+parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
+parser.add_argument('--plotperiod', type=int, nargs='?', required=False, default=0, help='Plot period (miliseconds)')
+
+args = parser.parse_args()
+
+if args.showgt and args.tmfile is None:
+    parser.error("--showgt requires --tmfile")
+
+TEST_FILE = args.testfile
+
+MODELSDIR = args.modelsdir
+if MODELSDIR[-1] != '/':
+    MODELSDIR += '/'
 
 num_features = len(HumanGraphFromView.get_all_features())
 
@@ -31,7 +51,7 @@ with open("../human_pose.json", 'r') as f:
     skeleton = human_pose["skeleton"]
     keypoints = human_pose["keypoints"]
 
-PLOTPERIOD = 0  # In miliseconds
+PLOTPERIOD = args.plotperiod  # In miliseconds
 CLASSIFICATION_THRESHOLD = 0.5
 
 from pyqtgraph.Qt import QtCore, QtGui
@@ -39,12 +59,12 @@ import pyqtgraph.opengl as gl
 import pyqtgraph as pg
 import numpy as np
 
-SHOW_GT = True
+SHOW_GT = args.showgt
 
 if SHOW_GT:
     tm = pickle.load(open(parameters.transformations_path, 'rb'))
     camera_i_transforms = []
-    tm_dataset = pickle.load(open(sys.argv[2], 'rb'))
+    tm_dataset = pickle.load(open(args.tmfile[0], 'rb'))
     dataset_camera_d_transforms = []
     for cam_idx, cam in enumerate(parameters.camera_names):
         trfm_model = tm.get_transform(parameters.camera_names[cam_idx], "root")
@@ -97,15 +117,15 @@ class Visualizer(object):
         # Instantiate the MLP
         numbers_per_joint = parameters.numbers_per_joint
         self.mlp = PoseEstimatorMLP(input_dimensions=len(parameters.cameras)*len(parameters.joint_list)*numbers_per_joint, output_dimensions=54)
-        saved = torch.load('../models/save_with_robot_5_5_panoptic.pytorch', map_location=device)
+        saved = torch.load(MODELSDIR + 'pose_estimator.pytorch', map_location=device)
         self.mlp.load_state_dict(saved['model_state_dict'])
         self.mlp = self.mlp.to(device)
 
         # Instantiate the skeleton matching model
-        params = pickle.load(open('../models/slmodel_5cams_panoptic.prms', 'rb'))
+        params = pickle.load(open(MODELSDIR + 'skeleton_matching.prms', 'rb'))
         self.model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
                 params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-        self.model.load_state_dict(torch.load('../models/slmodel_5cams_panoptic.tch', map_location=device))
+        self.model.load_state_dict(torch.load(MODELSDIR + 'skeleton_matching.tch', map_location=device))
         self.model = self.model.to(device)
 
 
@@ -137,7 +157,6 @@ class Visualizer(object):
                 return
 
             subgraph = scenario.graphs[0].to(device)
-            labels = scenario.labels[0].to(device)
             indices = scenario.data['edge_nodes_indices'][0].to(device)
             nodes_camera = scenario.data['nodes_camera'][0]
             feats = subgraph.ndata['h'].to(device)
@@ -147,7 +166,6 @@ class Visualizer(object):
                 layer.g = subgraph
             outputs = torch.squeeze(self.model(feats.float(), subgraph))
 
-            labels = torch.squeeze(labels).to('cpu')#.to(device, dtype=torch.float32)
             indices = torch.squeeze(indices).to('cpu')#.to(device)
 
             # Process the output graph as it comes from the GNN
@@ -350,11 +368,6 @@ class Visualizer(object):
         self.start()
 
 
-if SHOW_GT:
-    json_list = sys.argv[1:-1]
-else:
-    json_list = sys.argv[1:]
-
-v = Visualizer(PLOTPERIOD, json_list)
+v = Visualizer(PLOTPERIOD, TEST_FILE)
 v.animation()
 

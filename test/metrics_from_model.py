@@ -25,6 +25,7 @@ from pytransform3d.transform_manager import TransformManager
 
 import itertools
 import copy
+import argparse
 
 torch.set_grad_enabled(False)
 
@@ -38,15 +39,27 @@ from skeleton_matching_utils import get_person_proposal_from_network_output
 sys.path.append('../')
 from parameters import parameters 
 
-if len(sys.argv) < 2:
-    print(f'Run: {sys.argv[0]} test1.json test2.json ... tm_files_directory')
-    sys.exit(-1)
 
-TEST_FILES = sys.argv[1:-1]
+parser = argparse.ArgumentParser(description='Print accuracy and time metrics of skeleton-matching ans pose estimation models (CMU Panoptic only)')
 
-tm_dir = sys.argv[-1]
+parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='List of json files used as input')
+parser.add_argument('--tmdir', type=str, nargs=1,required=True, help='Directory that contains the files with the transfomation matrices')
+parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
+parser.add_argument('--datastep', type=int, nargs='?', required=False, default=12, help='Data step used to compute the metrics')
+
+
+args = parser.parse_args()
+
+TEST_FILES = args.testfiles
+
+tm_dir = args.tmdir[0]
 if tm_dir[-1] != '/':
     tm_dir += '/'
+
+MODELSDIR = args.modelsdir
+if MODELSDIR[-1] != '/':
+    MODELSDIR += '/'
+
 
 tm = pickle.load(open(parameters.transformations_path, 'rb'))
 camera_i_transforms = []
@@ -78,20 +91,20 @@ time_graph_matching = 0.
 time_graph_matching_person = 0.
 time_3D = 0.
 time_3D_person = 0.
-INTERVAL = 12
+DATASTEP = args.datastep
 
 #######################################
 
 numbers_per_joint = parameters.numbers_per_joint
 mlp = PoseEstimatorMLP(input_dimensions=len(parameters.cameras)*len(parameters.joint_list)*numbers_per_joint, output_dimensions=54)
-saved = torch.load('../models/save_with_robot_5_5_panoptic.pytorch', map_location=device)
+saved = torch.load(MODELSDIR + 'pose_estimator.pytorch', map_location=device)
 mlp.load_state_dict(saved['model_state_dict'])
 mlp = mlp.to(device)
 
-params = pickle.load(open('../models/slmodel_5cams_panoptic.prms', 'rb'))
+params = pickle.load(open(MODELSDIR + 'skeleton_matching.prms', 'rb'))
 model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
         params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-model.load_state_dict(torch.load('../models/slmodel_5cams_panoptic.tch', map_location=device))
+model.load_state_dict(torch.load(MODELSDIR + 'skeleton_matching.tch', map_location=device))
 model = model.to(device)
 
 
@@ -116,7 +129,7 @@ for file in TEST_FILES:
 
         n_input += 1
 
-        if (n_input - 1) % INTERVAL == 0:
+        if (n_input - 1) % DATASTEP == 0:
 
             # LOAD GROUND TRUTH
 
@@ -176,13 +189,9 @@ for file in TEST_FILES:
             if len(parameters.used_cameras) > 1:
                 processed_input = dict()
                 for cam in input_element:
-                    # if cam in non_used_cameras:
-                    #     continue
-                    data = json.loads(input_element[cam][0]) #input_element[cam][0]#
+                    data = json.loads(input_element[cam][0])
                     cam_data = []
                     for s in data:
-                        # if len(list(s.keys()))>5:
-                        # if str(parameters.neck_id) in s.keys():
                         cam_data.append(s)
                     if cam_data:
                         processed_input[cam] = []
@@ -199,7 +208,6 @@ for file in TEST_FILES:
 
                 try:
                     subgraph = scenario.graphs[0].to(device)
-                    labels = scenario.labels[0].to(device)
                     indices = scenario.data['edge_nodes_indices'][0].to(device)
                     nodes_camera = scenario.data['nodes_camera'][0]
                     feats = subgraph.ndata['h'].to(device)
@@ -209,8 +217,7 @@ for file in TEST_FILES:
                         layer.g = subgraph
                     outputs = torch.squeeze(model(feats.float(), subgraph))
 
-                    labels = torch.squeeze(labels).to('cpu')#.to(device, dtype=torch.float32)
-                    indices = torch.squeeze(indices).to('cpu')#.to(device)
+                    indices = torch.squeeze(indices).to('cpu')
                 except:
                     continue
 

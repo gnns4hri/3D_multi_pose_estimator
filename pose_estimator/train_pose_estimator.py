@@ -52,10 +52,6 @@ else:
     print('Using CPU')
 
 
-# if len(sys.argv) < 3:
-#     print(f'Run: {sys.argv[0]} train1.json train2.json ... trainN.json dev.json')
-#     sys.exit(-1)
-
 TRAIN_FILES = args.trainset
 DEV_FILES = args.devset
 

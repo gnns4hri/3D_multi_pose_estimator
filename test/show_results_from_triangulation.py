@@ -5,11 +5,31 @@ import json
 import copy
 import cv2
 import numpy as np
-import networkx as nx
+import argparse
 
 sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
 from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
+
+parser = argparse.ArgumentParser(description='Print accuracy and time metrics of skeleton-matching ans pose estimation models (CMU Panoptic only)')
+
+parser.add_argument('--testfile', type=str, nargs=1, required=True, help='Test file used as input')
+parser.add_argument('--showgt', action='store_true', help='Show ground truth')
+parser.add_argument('--tmfile', type=str, nargs=1, help='Directory that contains the files with the transfomation matrices')
+parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
+parser.add_argument('--plotperiod', type=int, nargs='?', required=False, default=0, help='Plot period (miliseconds)')
+
+args = parser.parse_args()
+
+if args.showgt and args.tmfile is None:
+    parser.error("--showgt requires --tmfile")
+
+TEST_FILE = args.testfile
+
+MODELSDIR = args.modelsdir
+if MODELSDIR[-1] != '/':
+    MODELSDIR += '/'
+
 
 num_features = len(HumanGraphFromView.get_all_features())
 
@@ -43,11 +63,11 @@ for cam_idx, cam in enumerate(parameters.camera_names):
     projection = trfm[0:3, :]
     projection_matrices[cam] = projection
 
-SHOW_GT = True
+SHOW_GT = args.showgt
 
 if SHOW_GT:
     camera_i_transforms = []
-    tm_dataset = pickle.load(open(sys.argv[2], 'rb'))
+    tm_dataset = pickle.load(open(args.tmfile[0], 'rb'))
     dataset_camera_d_transforms = []
     for cam_idx, cam in enumerate(parameters.camera_names):
         trfm_model = tm.get_transform(parameters.camera_names[cam_idx], "root")
@@ -61,7 +81,7 @@ with open("../human_pose.json", 'r') as f:
     skeleton = human_pose["skeleton"]
     keypoints = human_pose["keypoints"]
 
-PLOTPERIOD = 0  # In miliseconds
+PLOTPERIOD = args.plotperiod  # In miliseconds
 CLASSIFICATION_THRESHOLD = 0.5
 
 from pyqtgraph.Qt import QtCore, QtGui
@@ -113,10 +133,10 @@ class Visualizer(object):
     def init_models(self):
         # Instantiate the skeleton matching model
 
-        params = pickle.load(open('../models/slmodel_5cams_panoptic.prms', 'rb'))
+        params = pickle.load(open(MODELSDIR + 'skeleton_matching.prms', 'rb'))
         self.model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
                 params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-        self.model.load_state_dict(torch.load('../models/slmodel_5cams_panoptic.tch', map_location=device))
+        self.model.load_state_dict(torch.load(MODELSDIR + 'skeleton_matching.tch', map_location=device))
         self.model = self.model.to(device)
 
 
@@ -356,11 +376,6 @@ class Visualizer(object):
         self.timer.start(self.period)
         self.start()
 
-if SHOW_GT:
-    json_list = sys.argv[1:-1]
-else:
-    json_list = sys.argv[1:]
-
-v = Visualizer(PLOTPERIOD, json_list)
+v = Visualizer(PLOTPERIOD, TEST_FILE)
 v.animation()
 

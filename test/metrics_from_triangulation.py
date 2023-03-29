@@ -25,6 +25,7 @@ from pytransform3d.transform_manager import TransformManager
 
 import itertools
 import copy
+import argparse
 
 torch.set_grad_enabled(False)
 
@@ -36,15 +37,24 @@ from skeleton_matching_utils import get_person_proposal_from_network_output
 sys.path.append('../')
 from parameters import parameters 
 
-if len(sys.argv) < 2:
-    print(f'Run: {sys.argv[0]} test1.json test2.json ... tm_files_directory')
-    sys.exit(-1)
+parser = argparse.ArgumentParser(description='Print accuracy and time metrics of skeleton-matching ans pose estimation models (CMU Panoptic only)')
 
-TEST_FILES = sys.argv[1:-1]
+parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='List of json files used as input')
+parser.add_argument('--tmdir', type=str, nargs=1,required=True, help='Directory that contains the files with the transfomation matrices')
+parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
+parser.add_argument('--datastep', type=int, nargs='?', required=False, default=12, help='Data step used to compute the metrics')
 
-tm_dir = sys.argv[-1]
+args = parser.parse_args()
+
+TEST_FILES = args.testfiles
+
+tm_dir = args.tmdir[0]
 if tm_dir[-1] != '/':
     tm_dir += '/'
+
+MODELSDIR = args.modelsdir
+if MODELSDIR[-1] != '/':
+    MODELSDIR += '/'
 
 tm = pickle.load(open(parameters.transformations_path, 'rb'))
 projection_matrices = {}
@@ -89,16 +99,16 @@ time_graph_matching = 0.
 time_graph_matching_person = 0.
 time_3D = 0.
 time_3D_person = 0.
-INTERVAL = 12
+INTERVAL = args.datastep
 
 #######################################
 
 numbers_per_joint = parameters.numbers_per_joint
 
-params = pickle.load(open('../models/slmodel_5cams_panoptic.prms', 'rb'))
+params = pickle.load(open(MODELSDIR + 'skeleton_matching.prms', 'rb'))
 model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
         params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-model.load_state_dict(torch.load('../models/slmodel_5cams_panoptic.tch', map_location=device))
+model.load_state_dict(torch.load(MODELSDIR + 'skeleton_matching.tch', map_location=device))
 model = model.to(device)
 
 
@@ -201,7 +211,6 @@ for file in TEST_FILES:
 
             try:
                 subgraph = scenario.graphs[0].to(device)
-                labels = scenario.labels[0].to(device)                
                 indices = scenario.data['edge_nodes_indices'][0].to(device)
                 nodes_camera = scenario.data['nodes_camera'][0]
                 feats = subgraph.ndata['h'].to(device)
@@ -211,7 +220,6 @@ for file in TEST_FILES:
                     layer.g = subgraph
                 outputs = torch.squeeze(model(feats.float(), subgraph))
                 
-                labels = torch.squeeze(labels).to('cpu')
                 indices = torch.squeeze(indices).to('cpu')
             except:
                 continue
