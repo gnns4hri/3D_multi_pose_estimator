@@ -3,31 +3,16 @@ import sys
 import torch
 import pickle
 import json
-import cv2
-
+from tqdm import tqdm
 import numpy as np
-
-sys.path.append('../skeleton_matching')
-from gat2 import GAT2 as GAT
-from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
-
-
-num_features = len(HumanGraphFromView.get_all_features())
-
-if torch.cuda.is_available() is True:
-    device = torch.device('cuda')
-else:
-    device = torch.device('cpu')
-
-from pytransform3d import rotations as pr
-from pytransform3d import transformations as pt
-from pytransform3d.transform_manager import TransformManager
-
 import itertools
 import copy
 import argparse
 
-torch.set_grad_enabled(False)
+
+sys.path.append('../skeleton_matching')
+from gat2 import GAT2 as GAT
+from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
 
 
 sys.path.append('../utils')
@@ -37,7 +22,7 @@ from skeleton_matching_utils import get_person_proposal_from_network_output
 sys.path.append('../')
 from parameters import parameters 
 
-parser = argparse.ArgumentParser(description='Print accuracy and time metrics of skeleton-matching and triangulation (CMU Panoptic only)')
+parser = argparse.ArgumentParser(description='Print accuracy and time metrics of the skeleton-matching model combined with triangulation (CMU Panoptic only)')
 
 parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='List of json files used as input')
 parser.add_argument('--tmdir', type=str, nargs=1,required=True, help='Directory that contains the files with the transfomation matrices')
@@ -55,6 +40,16 @@ if tm_dir[-1] != '/':
 MODELSDIR = args.modelsdir
 if MODELSDIR[-1] != '/':
     MODELSDIR += '/'
+
+num_features = len(HumanGraphFromView.get_all_features())
+
+if torch.cuda.is_available() is True:
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
+
+
+torch.set_grad_enabled(False)
 
 tm = pickle.load(open(parameters.transformations_path, 'rb'))
 projection_matrices = {}
@@ -118,6 +113,7 @@ n_input = 0
 
 
 for file in TEST_FILES:
+    print(file)
     dataset_name = file.split('/')[-1]
     tm_file = tm_dir + 'tm_' + dataset_name.split('_')[0] + '_' + dataset_name.split('_')[1] + '.pickle'
     tm_dataset = pickle.load(open(tm_file, 'rb'))
@@ -129,7 +125,7 @@ for file in TEST_FILES:
 
     input_data = json.load(open(file, 'rb'))
     total_data += len(input_data)
-    for input_element in input_data:
+    for input_element in tqdm(input_data):
 
         n_input += 1
 
@@ -203,7 +199,6 @@ for file in TEST_FILES:
             scenario = MergedMultipleHumansDataset(processed_input, mode='test', limit=10000, debug=True, alt=parameters.graph_alternative, verbose=False)
 
             if len(scenario.graphs)==0:
-                print('empty scenario')
                 continue
 
             n_data += 1
@@ -352,28 +347,26 @@ for file in TEST_FILES:
                         TP[i_th].append(0)
                         FP[i_th].append(1)
 
-        if n_input % 100 == 0 or n_input == total_data:
-            print(f'Data {n_input} from {total_data}')
-            for i_th, th in enumerate(mpjpe_threshold):
-                TP_np = np.array(TP[i_th])
-                FP_np = np.array(FP[i_th])
-                TP_np = np.cumsum(TP_np)
-                FP_np = np.cumsum(FP_np)
-                recall = TP_np / (n_gt + 1e-5)
-                precise = TP_np / (TP_np + FP_np + 1e-5)
-                total_num = len(TP[i_th])
-                for n in range(total_num - 2, -1, -1):
-                    precise[n] = max(precise[n], precise[n + 1])
-                precise = np.concatenate(([0], precise, [0]))
-                recall = np.concatenate(([0], recall, [1]))
-                index = np.where(recall[1:] != recall[:-1])[0]
-                ap = np.sum((recall[index + 1] - recall[index]) * precise[index + 1])
-                print('AP, precise and recall for', th, ':', ap, precise[-2], recall[-2])
+for i_th, th in enumerate(mpjpe_threshold):
+    TP_np = np.array(TP[i_th])
+    FP_np = np.array(FP[i_th])
+    TP_np = np.cumsum(TP_np)
+    FP_np = np.cumsum(FP_np)
+    recall = TP_np / (n_gt + 1e-5)
+    precise = TP_np / (TP_np + FP_np + 1e-5)
+    total_num = len(TP[i_th])
+    for n in range(total_num - 2, -1, -1):
+        precise[n] = max(precise[n], precise[n + 1])
+    precise = np.concatenate(([0], precise, [0]))
+    recall = np.concatenate(([0], recall, [1]))
+    index = np.where(recall[1:] != recall[:-1])[0]
+    ap = np.sum((recall[index + 1] - recall[index]) * precise[index + 1])
+    print('AP, precise and recall for', th, ':', ap, precise[-2], recall[-2])
 
-            if n_matching_poses > 0:
-                print("MEAN ERR (mm)", global_acum_err*1000./n_matching_poses)
-            if n_data > 0:
-                print('Mean time for graph matching', time_graph_matching / n_data)
-                print('Mean time for graph matching (per person)', time_graph_matching_person / n_data)
-                print('Mean time for 3D', time_3D / n_data)
-                print('Mean time for 3D (per person)', time_3D_person / n_data)
+if n_matching_poses > 0:
+    print("MEAN ERR (mm)", global_acum_err*1000./n_matching_poses)
+if n_data > 0:
+    print('Mean time for graph matching', time_graph_matching / n_data)
+    print('Mean time for graph matching (per person)', time_graph_matching_person / n_data)
+    print('Mean time for 3D', time_3D / n_data)
+    print('Mean time for 3D (per person)', time_3D_person / n_data)

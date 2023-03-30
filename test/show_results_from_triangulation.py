@@ -3,13 +3,20 @@ import torch
 import pickle
 import json
 import copy
-import cv2
 import numpy as np
 import argparse
 
 sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
 from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
+
+sys.path.append('../')
+from parameters import parameters 
+
+sys.path.append('../utils')
+from pose_estimator_utils import camera_matrix, triangulate
+from skeleton_matching_utils import get_person_proposal_from_network_output
+
 
 parser = argparse.ArgumentParser(description='Display 3D multi-pose results using triangulation')
 
@@ -39,13 +46,6 @@ else:
     device = torch.device('cpu')
 
 torch.set_grad_enabled(False)
-
-sys.path.append('../')
-from parameters import parameters 
-
-sys.path.append('../utils')
-from pose_estimator_utils import camera_matrix, triangulate
-from skeleton_matching_utils import get_person_proposal_from_network_output
 
 tm = pickle.load(open(parameters.transformations_path, 'rb'))
 projection_matrices = {}

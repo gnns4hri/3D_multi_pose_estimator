@@ -1,5 +1,3 @@
-import sys
-
 from collections import namedtuple
 
 FORMAT = 'COCO'

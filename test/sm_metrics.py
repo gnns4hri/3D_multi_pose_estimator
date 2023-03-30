@@ -5,6 +5,7 @@ import json
 import argparse
 import numpy as np
 import copy
+from tqdm import tqdm
 from sklearn.metrics import adjusted_rand_score, homogeneity_completeness_v_measure
 
 
@@ -18,7 +19,7 @@ from skeleton_matching_utils import get_person_proposal_from_network_output
 sys.path.append('../')
 from parameters import parameters 
 
-parser = argparse.ArgumentParser(description='Print accuracy and time metrics of skeleton-matching and pose estimation models (CMU Panoptic only)')
+parser = argparse.ArgumentParser(description='Print metrics of the skeleton-matching model (ground truth is required)')
 
 parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='List of json files used as input')
 parser.add_argument('--tmdir', type=str, nargs=1,required=True, help='Directory that contains the files with the transfomation matrices')
@@ -102,7 +103,7 @@ for file in TEST_FILES:
     input_data = json.load(open(file, 'rb'))
     total_data += len(input_data)
 
-    for input_element in input_data:
+    for input_element in tqdm(input_data):
         n_input += 1
 
         if (n_input - 1) % DATASTEP == 0:
@@ -179,7 +180,6 @@ for file in TEST_FILES:
             scenario = MergedMultipleHumansDataset(processed_input, mode='test', limit=10000, debug=True, alt=parameters.graph_alternative, verbose=False)
 
             if len(scenario.graphs)==0:
-                print('empty scenario')
                 continue
 
             try:
@@ -222,9 +222,8 @@ for file in TEST_FILES:
             homogeneity += l_homogeneity
             completeness += l_completeness
             v_measure += l_v_measure
-            if n_measures%20 == 0:
-                print("n data", n_data)
-                print('rand score', r_score/n_data)
-                print('homogeneity', homogeneity/n_data)
-                print('completeness', completeness/n_data)
-                print('v_measure', v_measure/n_data)
+
+print('rand score', r_score/n_data)
+print('homogeneity', homogeneity/n_data)
+print('completeness', completeness/n_data)
+print('v_measure', v_measure/n_data)

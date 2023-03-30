@@ -4,6 +4,7 @@ import pickle
 import json
 import argparse
 import dgl
+from tqdm import tqdm
 from torch.utils.data import DataLoader
 from sklearn.metrics import adjusted_rand_score, homogeneity_completeness_v_measure
 
@@ -18,9 +19,9 @@ from skeleton_matching_utils import get_person_proposal_from_network_output
 sys.path.append('../')
 from parameters import parameters 
 
-parser = argparse.ArgumentParser(description='Print accuracy and time metrics of skeleton-matching and pose estimation models (CMU Panoptic only)')
+parser = argparse.ArgumentParser(description='Print metrics of the skeleton-matching model (ground truth is not required)')
 
-parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='List of json files used as input')
+parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='List of json files used as input (each file contains data of a single individual)')
 parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
 parser.add_argument('--datastep', type=int, nargs='?', required=False, default=12, help='Data step used to compute the metrics')
 
@@ -103,11 +104,12 @@ for filename in TEST_FILES[1:]:
     this_length = len(json.loads(open(filename, "rb").read()))
     probabilities_set.append(0.8*this_length/first_length)
 
+print('LOADING GRAPHS...')
 test_dataset = MergedMultipleHumansDataset(TEST_FILES, probabilities_set, limit=1000, mode='test_generated', alt='3', raw_dir='.')
 
 test_dataloader = DataLoader(test_dataset, batch_size=1, collate_fn=collate)
 
-for data in test_dataloader:
+for data in tqdm(test_dataloader):
     subgraph, labels, indices, nodes_camera = data
 
     feats = subgraph.ndata['h'].to(device)
@@ -158,9 +160,8 @@ for data in test_dataloader:
     homogeneity += l_homogeneity
     completeness += l_completeness
     v_measure += l_v_measure
-    if n_measures%20 == 0:
-        print("n data", n_data)
-        print('rand score', r_score/n_data)
-        print('homogeneity', homogeneity/n_data)
-        print('completeness', completeness/n_data)
-        print('v_measure', v_measure/n_data)
+
+print('rand score', r_score/n_data)
+print('homogeneity', homogeneity/n_data)
+print('completeness', completeness/n_data)
+print('v_measure', v_measure/n_data)

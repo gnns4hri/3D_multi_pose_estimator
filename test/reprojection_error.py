@@ -1,42 +1,19 @@
-import time
 import sys
 import torch
 import pickle
 import json
-import cv2
 import math
 import numpy as np
-import networkx as nx
+import copy
+import argparse
+from tqdm import tqdm
 
 sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
-from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView, CAMW, CAMH
+from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
 sys.path.append('../utils')
 from pose_estimator_utils import camera_matrix, get_distortion_coefficients, from_homogeneous, from_homogeneous2, triangulate
 
-from torch.utils.data import DataLoader
-
-num_features = len(HumanGraphFromView.get_all_features())
-
-from collections import namedtuple
-from operator import itemgetter
-Matching = namedtuple('Matching', 'id nodes score')
-
-from functools import lru_cache
-
-if torch.cuda.is_available() is True:
-    device = torch.device('cuda')
-else:
-    device = torch.device('cpu')
-
-from pytransform3d import rotations as pr
-from pytransform3d import transformations as pt
-from pytransform3d.transform_manager import TransformManager
-
-import itertools
-import copy
-
-torch.set_grad_enabled(False)
 
 sys.path.append('../utils')
 from pose_estimator_dataset_from_json import PoseEstimatorDataset
@@ -44,30 +21,47 @@ from mlp import PoseEstimatorMLP
 from skeleton_matching_utils import get_person_proposal_from_network_output
 
 
-# sys.path.append('../optimisation_utils')
-# from tracker_dataset_with_robot import TrackerDataset, get_skeleton_indices#, get_3D_from_triangulation
-# from tracker_utils import camera_matrix, get_distortion_coefficients, from_homogeneous, from_homogeneous2
-# from skeleton_matching_utils import get_person_proposal_from_network_output
-
-times = {'a': 0, 'b': 0, 'c': 0, 'd': 0}
-
 sys.path.append('../')
 from parameters import parameters 
 
-if len(sys.argv) < 1:
-    print(f'Run: {sys.argv[0]} test1.json, test2.json ...')
-    sys.exit(-1)
+parser = argparse.ArgumentParser(description='Compute the reprojection error, for each camera, of the estimated 3D, triangulated 3D and, optionally, ground truth 3D')
 
-WITH_GROUND_TRUTH = True
+parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='List of json files used as input')
+parser.add_argument('--showgt', action='store_true', help='Show ground truth reprojection error')
+parser.add_argument('--tmdir', type=str, nargs=1, help='Directory that contains the files with the transfomation matrices of the ground truth')
+parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
+parser.add_argument('--datastep', type=int, nargs='?', required=False, default=12, help='Data step used to compute the reprojection error')
 
-if WITH_GROUND_TRUTH:
-    TEST_FILES = sys.argv[1:-1]
-    tm_dir = sys.argv[-1]
+
+args = parser.parse_args()
+
+if args.showgt and args.tmdir is None:
+    parser.error("--showgt requires --tmdir")
+
+TEST_FILES = args.testfiles
+
+tm_dir = args.tmdir[0]
+if tm_dir[-1] != '/':
+    tm_dir += '/'
+
+MODELSDIR = args.modelsdir
+if MODELSDIR[-1] != '/':
+    MODELSDIR += '/'
+
+WITH_GROUND_TRUTH = args.showgt
+
+
+num_features = len(HumanGraphFromView.get_all_features())
+
+if torch.cuda.is_available() is True:
+    device = torch.device('cuda')
 else:
-    TEST_FILES = sys.argv[1:]
+    device = torch.device('cpu')
+
+
+torch.set_grad_enabled(False)
 
 tm = pickle.load(open(parameters.transformations_path, 'rb'))
-# tm_dataset = pickle.load(open(sys.argv[2], 'rb'))
 camera_i_transforms = {}
 camera_d_transforms = {}
 camera_matrices = {}
@@ -76,7 +70,6 @@ camera_matrices_np = {}
 distortion_coefficients_np = {}
 
 projection_matrices = {}
-# dataset_camera_d_transforms = []
 for cam_idx, cam in enumerate(parameters.camera_names):
     # Add the direct transform (root to camera) to the list
     trfm =   tm.get_transform("root", cam)
@@ -141,7 +134,7 @@ for k in parameters.camera_names:
     rep_error_triang[k] = []
     n_triang[k] = 0
     
-INTERVAL = 12
+DATASTEP = args.datastep
 
 #######################################
 
@@ -164,6 +157,7 @@ n_input = 0
 n_sample = 0
 
 for file in TEST_FILES:
+    print(file)
     if WITH_GROUND_TRUTH:
         dataset_name = file.split('/')[-1]
         tm_file = tm_dir + 'tm_' + dataset_name.split('_')[0] + '_' + dataset_name.split('_')[1] + '.pickle'
@@ -177,11 +171,11 @@ for file in TEST_FILES:
 
     total_data = len(input_data)
 
-    for input_element in input_data:
+    for input_element in tqdm(input_data):
 
         n_input += 1
 
-        if (n_input - 1) % INTERVAL == 0:
+        if (n_input - 1) % DATASTEP == 0:
 
             if WITH_GROUND_TRUTH:
                 # LOAD GROUND TRUTH
@@ -254,7 +248,6 @@ for file in TEST_FILES:
             scenario = MergedMultipleHumansDataset(processed_input, mode='test', limit=10000, debug=True, alt=parameters.graph_alternative, verbose=False)
 
             if len(scenario.graphs)==0:
-                print('empty scenario')
                 continue
 
             n_data += 1
@@ -425,13 +418,13 @@ for file in TEST_FILES:
                         triang_err = -1
 
 
-            if n_sample % 50 == 0 or n_input == total_data:
-                for k in parameters.camera_names:
-                    print('CAMERA', k, '------------------')
-                    if n_est[k]>0.:
-                        print('est', np.mean(np.array(rep_error_est[k])), np.median(np.array(rep_error_est[k])))
-                    if n_gt[k]>0.:
-                        print('GT', np.mean(np.array(rep_error_gt[k])), np.median(np.array(rep_error_gt[k])))
-                    if n_triang[k]>0.:
-                        print('triang', np.mean(np.array(rep_error_triang[k])), np.median(np.array(rep_error_triang[k])))                        
+print('**********************  REPROJECTION ERRORS (mean and median) **********************')
+for k in parameters.camera_names:
+    print('------------------','CAMERA', k, '------------------')
+    if n_est[k]>0.:
+        print('est', np.mean(np.array(rep_error_est[k])), np.median(np.array(rep_error_est[k])))
+    if n_gt[k]>0.:
+        print('GT', np.mean(np.array(rep_error_gt[k])), np.median(np.array(rep_error_gt[k])))
+    if n_triang[k]>0.:
+        print('triang', np.mean(np.array(rep_error_triang[k])), np.median(np.array(rep_error_triang[k])))                        
                                 

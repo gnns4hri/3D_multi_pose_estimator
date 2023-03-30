@@ -10,7 +10,15 @@ sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
 from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
 
-parser = argparse.ArgumentParser(description='Display 3D multi-pose results using a 3D pose estimation model')
+sys.path.append('../')
+from parameters import parameters 
+
+sys.path.append('../utils')
+from pose_estimator_dataset_from_json import PoseEstimatorDataset
+from mlp import PoseEstimatorMLP
+from skeleton_matching_utils import get_person_proposal_from_network_output
+
+parser = argparse.ArgumentParser(description='Display 3D multi-pose results using the 3D pose estimation model')
 
 parser.add_argument('--testfile', type=str, nargs=1, required=True, help='Test file used as input')
 parser.add_argument('--showgt', action='store_true', help='Show ground truth')
@@ -37,14 +45,6 @@ else:
     device = torch.device('cpu')
 
 torch.set_grad_enabled(False)
-
-sys.path.append('../')
-from parameters import parameters 
-
-sys.path.append('../utils')
-from pose_estimator_dataset_from_json import PoseEstimatorDataset
-from mlp import PoseEstimatorMLP
-from skeleton_matching_utils import get_person_proposal_from_network_output
 
 with open("../human_pose.json", 'r') as f:
     human_pose = json.load(f)
