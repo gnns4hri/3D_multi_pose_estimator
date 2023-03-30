@@ -67,7 +67,7 @@ if CONFIGURATION == 'PANOPTIC':
     parameters = TrackerParameters(
         image_width=1920,
         image_height=1080,
-        tag_size=0.452,  # before 0.313,
+        tag_size=0.452,  
         cameras=[0, 1, 2, 3, 4],
         camera_names=['trackera', 'trackerb', 'trackerc', 'trackerd', 'trackere'],
         fx=[1395.59, 1395.94, 1395.31, 1591.32, 1572.31],
@@ -126,8 +126,8 @@ elif CONFIGURATION == 'ARPLAB':
         c_w=[1280,          1280,              1280,            1280,       1280,          1280],
 
         joint_list=JOINT_LIST,
-        numbers_per_joint=14,  # 1 (joint detected?) 2 (x)  3 (y)  4 (over the threshold?)  5 (certainty)
-        numbers_per_joint_for_loss=4,  # 1 (joint detected?) 2 (x)  3 (y)  4 (over the threshold?)  5 (certainty)
+        numbers_per_joint=14,  
+        numbers_per_joint_for_loss=4,  
         transformations_path='../tm_new.pickle',
         used_cameras=['trackera', 'trackerb', 'trackerc', 'trackerd', 'orinbot_l', 'orinbot_r'],
         used_cameras_skeleton_matching = ['trackera', 'trackerb', 'trackerc', 'trackerd', 'orinbot_l', 'orinbot_r'],
