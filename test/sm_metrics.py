@@ -123,7 +123,6 @@ for file in TEST_FILES:
             valid = True
             for cam in input_element:
                 if not cam in parameters.used_cameras:
-                # if cam in non_used_cameras:                    
                     continue
                 joints_3D_all = input_element[cam][3]
                 for id_skeleton, joints_3D in enumerate(joints_3D_all):

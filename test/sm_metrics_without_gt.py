@@ -21,7 +21,6 @@ from parameters import parameters
 parser = argparse.ArgumentParser(description='Print accuracy and time metrics of skeleton-matching and pose estimation models (CMU Panoptic only)')
 
 parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='List of json files used as input')
-# parser.add_argument('--tmdir', type=str, nargs=1,required=True, help='Directory that contains the files with the transfomation matrices')
 parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
 parser.add_argument('--datastep', type=int, nargs='?', required=False, default=12, help='Data step used to compute the metrics')
 
@@ -29,10 +28,6 @@ parser.add_argument('--datastep', type=int, nargs='?', required=False, default=1
 args = parser.parse_args()
 
 TEST_FILES = args.testfiles
-
-# tm_dir = args.tmdir[0]
-# if tm_dir[-1] != '/':
-#     tm_dir += '/'
 
 MODELSDIR = args.modelsdir
 if MODELSDIR[-1] != '/':
@@ -142,8 +137,7 @@ for data in test_dataloader:
             person_index += 1
         metrics_estimation.append(person_index)
 
-    # print('estimation', metrics_estimation)
-
+    
     output_features = [0.]*len(all_nodes)
     for (i, v) in zip(indices, labels.tolist()):
         output_features[i] = v
