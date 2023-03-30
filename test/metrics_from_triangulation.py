@@ -31,7 +31,7 @@ torch.set_grad_enabled(False)
 
 
 sys.path.append('../utils')
-from pose_estimator_utils import camera_matrix
+from pose_estimator_utils import camera_matrix, triangulate
 from skeleton_matching_utils import get_person_proposal_from_network_output
 
 sys.path.append('../')
@@ -251,26 +251,7 @@ for file in TEST_FILES:
                                 points_2D[j] = dict()
                             points_2D[j][camera] = np.array([pos[1], pos[2]])
                 
-
-                result3D = dict()
-                for idx_i in parameters.joint_list:
-                    idx = str(idx_i)
-                    mean_point3D = np.zeros((3, 1))
-                    if idx in points_2D.keys() and len(points_2D[idx]) > 1:
-                        cam_combinations = itertools.permutations(range(len(points_2D[idx].keys())), 2)
-                        n_comb = 0
-                        for comb in cam_combinations:
-                            cam1 = list(points_2D[idx].keys())[comb[0]]
-                            cam2 = list(points_2D[idx].keys())[comb[1]]
-                            point1 = np.array(points_2D[idx][cam1])
-                            new_point1 = cv2.undistortPoints(np.array([point1]), cam_matrix[cam1], distortion_coefficients[cam1])
-                            point2 = np.array(points_2D[idx][cam2])
-                            new_point2 = cv2.undistortPoints(np.array([point2]), cam_matrix[cam2], distortion_coefficients[cam2])
-                            point3d = cv2.triangulatePoints(projection_matrices[cam1], projection_matrices[cam2], new_point1, new_point2)
-                            point3d = point3d[0:3]/point3d[3]
-                            mean_point3D += point3d
-                            n_comb += 1
-                        result3D[idx] = mean_point3D/n_comb
+                result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices)                    
 
                 number_of_joints = len(parameters.joint_list)
                 x3D = np.zeros(number_of_joints)
