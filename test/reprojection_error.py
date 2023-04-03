@@ -40,9 +40,10 @@ if args.showgt and args.tmdir is None:
 
 TEST_FILES = args.testfiles
 
-tm_dir = args.tmdir[0]
-if tm_dir[-1] != '/':
-    tm_dir += '/'
+if args.tmdir is not None:
+    tm_dir = args.tmdir[0]
+    if tm_dir[-1] != '/':
+        tm_dir += '/'
 
 MODELSDIR = args.modelsdir
 if MODELSDIR[-1] != '/':
@@ -140,13 +141,13 @@ DATASTEP = args.datastep
 
 numbers_per_joint = parameters.numbers_per_joint
 mlp = PoseEstimatorMLP(input_dimensions=len(parameters.used_cameras)*len(parameters.joint_list)*numbers_per_joint, output_dimensions=54)
-saved = torch.load('../models_panoptic/pose_estimator.pytorch', map_location=device)
+saved = torch.load(MODELSDIR+'pose_estimator.pytorch', map_location=device)
 mlp.load_state_dict(saved['model_state_dict'])
 
-params = pickle.load(open('../models_panoptic/skeleton_matching.prms', 'rb'))
+params = pickle.load(open(MODELSDIR+'skeleton_matching.prms', 'rb'))
 model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
         params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-model.load_state_dict(torch.load('../models_panoptic/skeleton_matching.tch', map_location=device))
+model.load_state_dict(torch.load(MODELSDIR+'skeleton_matching.tch', map_location=device))
 model = model.to(device)
 
 
