@@ -3,20 +3,15 @@ from collections import namedtuple
 FORMAT = 'COCO'
 
 if FORMAT == 'BODY_25':
-    NECK_ID = 1
-    LEFTSHOULDER_ID = 5
-    RIGHTSHOULDER_ID = 2
     JOINT_LIST = [x for x in range(25)]
 elif FORMAT == 'COCO':
-    NECK_ID = 17
-    LEFTSHOULDER_ID = 5
-    RIGHTSHOULDER_ID = 6
     JOINT_LIST = [x for x in range(18)]
 else:
     raise Exception('Format not set correctly in parameters.py!')
 
 fields = (
-    'tag_size',
+    'image_width',
+    'image_height',    
     'cameras',
     'camera_names',
     'widths',
@@ -42,23 +37,14 @@ fields = (
     'used_cameras_skeleton_matching',
     'used_joints',
     'min_number_of_views',
-    'no3d',
-    'draw',
     'format',
-    'neck_id',
-    'leftshoulder_id',
-    'rightshoulder_id',
-    'dataset_generator_records_only_one_skeleton',
     'graph_alternative',
-    'camera_colours',
-    'old_data_to_remove',
-    'image_width',
-    'image_height'
+    'axes_3D'
 )
 
 TrackerParameters = namedtuple('TrackerParameters', fields, defaults=(None,) * len(fields))
 
-CONFIGURATION = 'PANOPTIC' # values = {PANOPTIC, ARPLAB}
+CONFIGURATION = 'ARPLAB' # values = {PANOPTIC, ARPLAB}
 
 #
 #  PARAMETERS
@@ -67,7 +53,6 @@ if CONFIGURATION == 'PANOPTIC':
     parameters = TrackerParameters(
         image_width=1920,
         image_height=1080,
-        tag_size=0.452,  
         cameras=[0, 1, 2, 3, 4],
         camera_names=['trackera', 'trackerb', 'trackerc', 'trackerd', 'trackere'],
         fx=[1395.59, 1395.94, 1395.31, 1591.32, 1572.31],
@@ -87,16 +72,9 @@ if CONFIGURATION == 'PANOPTIC':
         used_cameras_skeleton_matching=['trackera', 'trackerb', 'trackerc', 'trackerd', 'trackere'],
         used_joints = [0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
         min_number_of_views = 2,
-        no3d=True,
-        draw=True,
         format=FORMAT,
-        neck_id=NECK_ID,
-        leftshoulder_id=LEFTSHOULDER_ID,
-        rightshoulder_id=RIGHTSHOULDER_ID,
         graph_alternative='3',
-        camera_colours={'trackera': (255, 0, 0), 'trackerb': (0, 255, 0), 'trackerc': (0, 0, 255),
-                        'trackerd': (127, 127, 0), 'trackere': (0, 127, 127)},
-        old_data_to_remove=0.3
+        axes_3D = {'X': (0, 1.), 'Y': (2, 1.), 'Z': (1, -1.)} #For drawing the skeletons: each tuple represents (coordinate index, axis direction)
     )
 elif CONFIGURATION == 'ARPLAB':
     F = 848. / 1280.
@@ -106,7 +84,6 @@ elif CONFIGURATION == 'ARPLAB':
         image_height=720,
         cameras=[0, 1, 2, 3, 4, 5],
         camera_names=['trackera', 'trackerb', 'trackerc', 'trackerd', 'orinbot_l', 'orinbot_r'], 
-        tag_size=0.452,
         kd0=[0., 0., 0., 0., 0., 0., 0.],
         kd1=[0., 0., 0., 0., 0., 0., 0.],
         kd2=[0., 0., 0., 0., 0., 0., 0.],
@@ -133,17 +110,9 @@ elif CONFIGURATION == 'ARPLAB':
         used_cameras_skeleton_matching = ['trackera', 'trackerb', 'trackerc', 'trackerd', 'orinbot_l', 'orinbot_r'],
         used_joints = [x for x in range(18)],
         min_number_of_views = 1,
-        no3d=True,
-        draw=True,
         format=FORMAT,
-        neck_id=NECK_ID,
-        leftshoulder_id=LEFTSHOULDER_ID,
-        rightshoulder_id=RIGHTSHOULDER_ID,
-        dataset_generator_records_only_one_skeleton=False,
         graph_alternative='3',
-        camera_colours={'trackera': (255, 0, 0), 'trackerb': (20, 150, 20), 'trackerc': (0, 255, 0), 'trackerd': (0, 0, 255),
-                        'orinbot_l': (0, 100, 160), 'orinbot_r': (0, 160, 100)},
-        old_data_to_remove=0.08
+        axes_3D = {'X': (0, 1.), 'Y': (1, 1.), 'Z': (2, -1.)} #For drawing the skeletons: each tuple represents (coordinate index, axis direction)        
     )
 else:
     print('NO VALID CONFIGURATION')
@@ -154,4 +123,3 @@ else:
 #
 assert len(parameters.cameras) == len(
     parameters.camera_names), "The number of cameras must be equal in 'cameras' and 'camera_names'"
-assert NECK_ID in parameters.joint_list, f"Joint {NECK_ID} (neck) is mandatory"

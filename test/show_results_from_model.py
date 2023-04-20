@@ -108,6 +108,8 @@ class Visualizer(object):
 
         self.init_models()
 
+        self.axes_3D = parameters.axes_3D
+
         self.input_data = []
         for json_file in json_files:
             self.input_data += json.load(open(json_file, 'rb'))
@@ -116,7 +118,7 @@ class Visualizer(object):
     def init_models(self):
         # Instantiate the MLP
         numbers_per_joint = parameters.numbers_per_joint
-        self.mlp = PoseEstimatorMLP(input_dimensions=len(parameters.cameras)*len(parameters.joint_list)*numbers_per_joint, output_dimensions=54)
+        self.mlp = PoseEstimatorMLP(input_dimensions=len(parameters.used_cameras)*len(parameters.joint_list)*numbers_per_joint, output_dimensions=54)
         saved = torch.load(MODELSDIR + 'pose_estimator.pytorch', map_location=device)
         self.mlp.load_state_dict(saved['model_state_dict'])
         self.mlp = self.mlp.to(device)
@@ -134,6 +136,9 @@ class Visualizer(object):
         if self.itert >= len(self.input_data):
             exit()
 
+        if self.itert%10!=0:
+            return
+
         input_element = self.input_data[self.itert]
         if len(parameters.used_cameras)>1:
             processed_input = dict()
@@ -141,8 +146,6 @@ class Visualizer(object):
                 data = json.loads(input_element[cam][0]) #input_element[cam][0]#
                 cam_data = []
                 for s in data:
-                    # if len(list(s.keys()))>5:
-                    # if str(parameters.neck_id) in s.keys():
                     cam_data.append(s)
                 if cam_data:
                     processed_input[cam] = []
@@ -176,8 +179,6 @@ class Visualizer(object):
             skeletons = json.loads(joints_json)
             final_output = []
             for sk in skeletons:
-                # if len(sk) < 3:
-                #     continue
                 person = dict()
                 person[cam] = list()
                 person[cam].append(json.dumps([sk]))
@@ -244,9 +245,9 @@ class Visualizer(object):
                 for j in range(number_of_joints):
                     idx = str(j)
                     if idx in person and j in parameters.used_joints:
-                        x3D[j] = person[idx][0]
-                        z3D[j] = -person[idx][1]
-                        y3D[j] = person[idx][2] #+ 2.
+                        x3D[j] = person[idx][self.axes_3D['X'][0]]*self.axes_3D['X'][1]
+                        y3D[j] = person[idx][self.axes_3D['Y'][0]]*self.axes_3D['Y'][1]
+                        z3D[j] = person[idx][self.axes_3D['Z'][0]]*self.axes_3D['Z'][1]
 
 
                 for idx in range(len(skeleton)):
@@ -296,9 +297,9 @@ class Visualizer(object):
             results_3d = torch.squeeze(output_all[person_id])*10.
             results_3d = results_3d.to('cpu')
 
-            x3D = results_3d[::3]
-            z3D = -results_3d[1::3]
-            y3D = results_3d[2::3]
+            x3D = results_3d[self.axes_3D['X'][0]::3]*self.axes_3D['X'][1]
+            y3D = results_3d[self.axes_3D['Y'][0]::3]*self.axes_3D['Y'][1]
+            z3D = results_3d[self.axes_3D['Z'][0]::3]*self.axes_3D['Z'][1]
 
             for idx in range(len(skeleton)):
                 line_x3D = []

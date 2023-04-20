@@ -52,11 +52,18 @@ projection_matrices = {}
 distortion_coefficients = {}
 cam_matrix = {}
 
+
 image_size = (parameters.image_width, parameters.image_height)
 for cam_idx, cam in enumerate(parameters.camera_names):
     # Add the direct transform (root to camera) to the list
-    trfm =   tm.get_transform("root", parameters.camera_names[cam_idx])
+    trfm =   tm.get_transform("root", cam)
     cam_matrix[cam] = camera_matrix(cam_idx).cpu().detach().numpy()
+    # if cam in ['orinbot_l', 'orinbot_r']:
+    #     cam_matrix[cam][0][0] = 529.40368652343
+    #     cam_matrix[cam][1][1] = 529.40368652343
+    #     cam_matrix[cam][0][2] = 657.70843505859
+    #     cam_matrix[cam][1][2] = 341.32931518554
+    #     print('change')
     distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.p1[cam_idx], parameters.p2[cam_idx], parameters.kd2[cam_idx]])
     projection = trfm[0:3, :]
     projection_matrices[cam] = projection
@@ -122,6 +129,8 @@ class Visualizer(object):
 
         self.init_models()
 
+        self.axes_3D = parameters.axes_3D        
+
         self.input_data = []
         for json_file in json_files:
             self.input_data += json.load(open(json_file, 'rb'))
@@ -143,6 +152,8 @@ class Visualizer(object):
         if self.itert >= len(self.input_data):
             exit()
 
+        if self.itert%10!=0:
+            return
         input_element = self.input_data[self.itert]
         processed_input = dict()
         for cam in input_element:
@@ -236,10 +247,9 @@ class Visualizer(object):
                 for j in range(number_of_joints):
                     idx = str(j)
                     if idx in person and j in parameters.used_joints:
-                        x3D[j] = person[idx][0]
-                        z3D[j] = -person[idx][1]
-                        y3D[j] = person[idx][2] #+ 2.
-
+                        x3D[j] = person[idx][self.axes_3D['X'][0]]*self.axes_3D['X'][1]
+                        y3D[j] = person[idx][self.axes_3D['Y'][0]]*self.axes_3D['Y'][1]
+                        z3D[j] = person[idx][self.axes_3D['Z'][0]]*self.axes_3D['Z'][1]                        
 
                 for idx in range(len(skeleton)):
                     line_x3D = []
@@ -263,8 +273,7 @@ class Visualizer(object):
             # Organize the points considering the different views
             points_2D = dict()
 
-            for cam_idx in parameters.cameras:
-                camera = parameters.camera_names[cam_idx]
+            for camera in parameters.used_cameras:
                 if person[camera] is not None:
                     pc = person[camera]
                     all_joints_data = scenario.jsons_for_head[pc]
@@ -272,21 +281,25 @@ class Visualizer(object):
                         if not j in points_2D.keys():
                             points_2D[j] = dict()
                         points_2D[j][camera] = np.array([pos[1], pos[2]])
+                        if pos[3] < 1.:
+                            print('error', pos[3])
 
 
-            result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices)                    
+            result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices) 
+            # print('3D',result3D)    
+            # print('2D', points_2D)
 
             number_of_joints = len(parameters.joint_list)
             x3D = np.zeros(number_of_joints)
             y3D = np.zeros(number_of_joints)
             z3D = np.zeros(number_of_joints)
 
-            for j in range(number_of_joints):
+            for j in parameters.used_joints:
                 idx = str(j)
                 if idx in result3D:
-                    x3D[j] = result3D[idx][0][0]
-                    z3D[j] = -result3D[idx][1][0]
-                    y3D[j] = result3D[idx][2][0]
+                    x3D[j] = result3D[idx][self.axes_3D['X'][0]][0]*self.axes_3D['X'][1]
+                    y3D[j] = result3D[idx][self.axes_3D['Y'][0]][0]*self.axes_3D['Y'][1]
+                    z3D[j] = result3D[idx][self.axes_3D['Z'][0]][0]*self.axes_3D['Z'][1]
 
 
             for idx in range(len(skeleton)):
