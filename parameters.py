@@ -105,7 +105,7 @@ elif CONFIGURATION == 'ARPLAB':
         joint_list=JOINT_LIST,
         numbers_per_joint=14,  
         numbers_per_joint_for_loss=4,  
-        transformations_path='../tm_new.pickle',
+        transformations_path='../tm_arp.pickle',
 
         # -------------------Use these two lines for models using only the robot cameras-------------------
         # used_cameras=['orinbot_l', 'orinbot_r'],
