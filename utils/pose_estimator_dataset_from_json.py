@@ -81,7 +81,7 @@ def get_3D_from_triangulation(data, skeleton_indices):
         idx = str(idx_i)
         mean_point3D = np.zeros((3, 1))
         if idx in points_2D.keys() and len(points_2D[idx]) > 1:
-            cam_combinations = itertools.permutations(range(len(points_2D[idx].keys())), 2)
+            cam_combinations = itertools.combinations(range(len(points_2D[idx].keys())), 2)
             n_comb = 0
             for comb in cam_combinations:
                 cam1 = list(points_2D[idx].keys())[comb[0]]

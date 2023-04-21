@@ -279,7 +279,7 @@ for file in TEST_FILES:
                 raw_input = dict()
                 valid_input = False
                 for camera in parameters.camera_names:
-                    if person[camera] is not None:
+                    if camera in person.keys() and person[camera] is not None:
                         pc = person[camera]
                         all_joints_data = [scenario.jsons_for_head[pc]]
                         raw_input[camera] = [json.dumps(all_joints_data)]
@@ -299,7 +299,7 @@ for file in TEST_FILES:
                                     points_2D[j] = dict()
                                 points_2D[j][cam] = np.array([pos[1], pos[2]])
 
-                triang_3D_person = triangulate(points_2D, camera_matrices_np, distortion_coefficients_np, projection_matrices)                    
+                triang_3D_person = triangulate(points_2D, camera_matrices_np, distortion_coefficients_np, projection_matrices, parameters.axes_3D['Y'][0])                    
 
                 triang_3D.append(triang_3D_person)
 

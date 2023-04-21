@@ -25,6 +25,7 @@ parser.add_argument('--showgt', action='store_true', help='Show ground truth')
 parser.add_argument('--tmfile', type=str, nargs=1, help='Transformation matrix file of the test dataset')
 parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
 parser.add_argument('--plotperiod', type=int, nargs='?', required=False, default=0, help='Plot period (miliseconds)')
+parser.add_argument('--datastep', type=int, nargs='?', required=False, default=10, help='Data step used to plot the results')
 
 args = parser.parse_args()
 
@@ -87,6 +88,7 @@ with open("../human_pose.json", 'r') as f:
     keypoints = human_pose["keypoints"]
 
 PLOTPERIOD = args.plotperiod  # In miliseconds
+DATASTEP = args.datastep
 CLASSIFICATION_THRESHOLD = 0.5
 
 from pyqtgraph.Qt import QtCore, QtGui
@@ -152,7 +154,7 @@ class Visualizer(object):
         if self.itert >= len(self.input_data):
             exit()
 
-        if self.itert%10!=0:
+        if self.itert%DATASTEP!=0:
             return
         input_element = self.input_data[self.itert]
         processed_input = dict()
@@ -274,6 +276,8 @@ class Visualizer(object):
             points_2D = dict()
 
             for camera in parameters.used_cameras:
+                # if camera not in ['orinbot_l', 'orinbot_r']:
+                #     continue
                 if person[camera] is not None:
                     pc = person[camera]
                     all_joints_data = scenario.jsons_for_head[pc]
@@ -285,7 +289,7 @@ class Visualizer(object):
                             print('error', pos[3])
 
 
-            result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices) 
+            result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices, parameters.axes_3D['Y'][0]) 
             # print('3D',result3D)    
             # print('2D', points_2D)
 
@@ -307,22 +311,24 @@ class Visualizer(object):
                 line_y3D = []
                 line_z3D = []
                 if str(skeleton[idx][0]-1) in result3D.keys() and str(skeleton[idx][1]-1) in result3D.keys():
-                    line_x3D.append(x3D[skeleton[idx][0]-1])
-                    line_y3D.append(y3D[skeleton[idx][0]-1])
-                    line_z3D.append(z3D[skeleton[idx][0]-1])
-                    line_x3D.append(x3D[skeleton[idx][1]-1])
-                    line_y3D.append(y3D[skeleton[idx][1]-1])
-                    line_z3D.append(z3D[skeleton[idx][1]-1])
-                    lines.append((line_x3D, line_y3D, line_z3D))
-                    lines_pid.append(person_id)
+                    if skeleton[idx][0]-1 in parameters.used_joints and skeleton[idx][1]-1 in parameters.used_joints:
+                        line_x3D.append(x3D[skeleton[idx][0]-1])
+                        line_y3D.append(y3D[skeleton[idx][0]-1])
+                        line_z3D.append(z3D[skeleton[idx][0]-1])
+                        line_x3D.append(x3D[skeleton[idx][1]-1])
+                        line_y3D.append(y3D[skeleton[idx][1]-1])
+                        line_z3D.append(z3D[skeleton[idx][1]-1])
+                        lines.append((line_x3D, line_y3D, line_z3D))
+                        lines_pid.append(person_id)
 
             #
             # Plot the coordinates in 3D
             #
             for j in result3D.keys():
                 p = int(j)
-                points.append([x3D[p], y3D[p], z3D[p]])
-                points_pid.append(person_id)
+                if p in parameters.used_joints:
+                    points.append([x3D[p], y3D[p], z3D[p]])
+                    points_pid.append(person_id)
 
         for i, line in enumerate(lines):
             lines[i] = np.array([[line[0][0].item(), line[1][0].item(), line[2][0].item()],

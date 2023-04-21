@@ -246,7 +246,7 @@ for file in TEST_FILES:
                                 points_2D[j] = dict()
                             points_2D[j][camera] = np.array([pos[1], pos[2]])
                 
-                result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices)                    
+                result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices, parameters.axes_3D['Y'][0])                    
 
                 number_of_joints = len(parameters.joint_list)
                 x3D = np.zeros(number_of_joints)

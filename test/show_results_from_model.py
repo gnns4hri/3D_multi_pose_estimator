@@ -25,6 +25,7 @@ parser.add_argument('--showgt', action='store_true', help='Show ground truth')
 parser.add_argument('--tmfile', type=str, nargs=1, help='Directory that contains the files with the transfomation matrices')
 parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
 parser.add_argument('--plotperiod', type=int, nargs='?', required=False, default=0, help='Plot period (miliseconds)')
+parser.add_argument('--datastep', type=int, nargs='?', required=False, default=10, help='Data step used to plot the results')
 
 args = parser.parse_args()
 
@@ -52,6 +53,7 @@ with open("../human_pose.json", 'r') as f:
     keypoints = human_pose["keypoints"]
 
 PLOTPERIOD = args.plotperiod  # In miliseconds
+DATASTEP = args.datastep
 CLASSIFICATION_THRESHOLD = 0.5
 
 from pyqtgraph.Qt import QtCore, QtGui
@@ -124,11 +126,14 @@ class Visualizer(object):
         self.mlp = self.mlp.to(device)
 
         # Instantiate the skeleton matching model
-        params = pickle.load(open(MODELSDIR + 'skeleton_matching.prms', 'rb'))
-        self.model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
-                params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
-        self.model.load_state_dict(torch.load(MODELSDIR + 'skeleton_matching.tch', map_location=device))
-        self.model = self.model.to(device)
+        if len(parameters.used_cameras)>1:
+            params = pickle.load(open(MODELSDIR + 'skeleton_matching.prms', 'rb'))
+            self.model = GAT(None, params['gnn_layers'], params['num_feats'], params['n_classes'], params['num_hidden'], params['heads'],
+                    params['nonlinearity'], params['final_activation'], params['in_drop'], params['attn_drop'], params['alpha'], params['residual'], bias=True)
+            self.model.load_state_dict(torch.load(MODELSDIR + 'skeleton_matching.tch', map_location=device))
+            self.model = self.model.to(device)
+        else:
+            self.model = None
 
 
     def process_data(self):
@@ -136,7 +141,7 @@ class Visualizer(object):
         if self.itert >= len(self.input_data):
             exit()
 
-        if self.itert%10!=0:
+        if self.itert%DATASTEP!=0:
             return
 
         input_element = self.input_data[self.itert]

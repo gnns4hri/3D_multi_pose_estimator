@@ -106,10 +106,17 @@ elif CONFIGURATION == 'ARPLAB':
         numbers_per_joint=14,  
         numbers_per_joint_for_loss=4,  
         transformations_path='../tm_new.pickle',
+
+        # -------------------Use these two lines for models using only the robot cameras-------------------
+        # used_cameras=['orinbot_l', 'orinbot_r'],
+        # used_cameras_skeleton_matching = ['orinbot_l', 'orinbot_r'],
+
+        # -------------------Use these two lines for models using all the cameras-------------------
         used_cameras=['trackera', 'trackerb', 'trackerc', 'trackerd', 'orinbot_l', 'orinbot_r'],
         used_cameras_skeleton_matching = ['trackera', 'trackerb', 'trackerc', 'trackerd', 'orinbot_l', 'orinbot_r'],
-        used_joints = [x for x in range(18)],
-        min_number_of_views = 1,
+
+        used_joints = [0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+        min_number_of_views = 2,
         format=FORMAT,
         graph_alternative='3',
         axes_3D = {'X': (0, 1.), 'Y': (1, 1.), 'Z': (2, -1.)} #For drawing the skeletons: each tuple represents (coordinate index, axis direction)        
