@@ -50,7 +50,7 @@ Install the dependencies in *requirements.txt*
 
 To use our system with your own camera setup, you must first calibrate the cameras to share a common frame of reference. Create a script that generates a pickle file containing the extrinsic matrices for each camera.
 
-We utilized an AprilTag to establish the coordinate origin during calibration. In this repository, you will find two sample calibration files: tm_arp.pickle and tm_panoptic.pickle, representing the transformation matrices for ARP lab cameras and CMU Panoptic cameras, respectively. Each file contains a _TransformManager_ of [pytransform3D](https://dfki-ric.github.io/pytransform3d/) comprising all the transformations between the cameras and the global frame of reference.
+We utilized an AprilTag to establish the coordinate origin during calibration. In this repository, you will find two sample calibration files: tm_arp.pickle and tm_panoptic.pickle, representing the transformation matrices for ARP lab cameras and CMU Panoptic cameras, respectively. Each file contains a _TransformManager_ of [pytransform3d](https://dfki-ric.github.io/pytransform3d/) comprising all the transformations between the cameras and the global frame of reference.
 
 Make sure to specify the camera names in the `parameters.py` file creating a new configuration for your environment.
 
@@ -105,19 +105,19 @@ cd pose_estimator
 python3 train_pose_estimator.py --trainset training_jsons --devset dev_jsons 
 ```
 
-For each set, $1$ or more JSON files can be specified. For simplicity, a single file can be created from several JSON file using the script `merge_jsons.py` in *utils*.
+For each set, $1$ or more JSON files can be specified. For simplicity, a single file can be created from several JSON files using the script `merge_jsons.py` in *utils*.
 
 ## Testing
 
-To test the model, first download the test files from either dataset in the [CMU Panoptic and ARP Lab datasets section](#cmu-panoptic-and-arp-lab-datasets) and the corresponding pre-trained model from the _models_ directory [here](https://www.dropbox.com/sh/6cn6ajddrfkb332/AACg_UpK22BlytWrP19w_VaNa?dl=0).
+To test our models, first download the test files from either dataset in the [CMU Panoptic and ARP Lab datasets section](#cmu-panoptic-and-arp-lab-datasets) and the corresponding pre-trained models from the _models_ directory [here](https://www.dropbox.com/sh/6cn6ajddrfkb332/AACg_UpK22BlytWrP19w_VaNa?dl=0).
 
-Alternatively, if you want to test a model you've trained with your own data, simply record additional data for this purpose. Note that any number of people can be present in these new recordings. Once everything is set up, open a terminal and navigate to the test directory:
+Alternatively, if you want to test the models you've trained with your own data, simply record additional data for this purpose. Note that any number of people can be present in these new recordings. Once everything is set up, open a terminal and navigate to the test directory:
 
 ``` shell
 cd test
 ```
 
-For getting the metrics and visualize the results from our model you will have to run these two scripts:
+For getting the metrics and visualize the results from the models you will have to run these two scripts:
 
 ``` shell
 python3 metrics_from_model.py --testfiles test_files --tmdir tm_files_directory --modelsdir models_directory
