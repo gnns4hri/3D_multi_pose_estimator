@@ -14,7 +14,7 @@ Higher values, approaching 1, indicate superior performance.
 |      **3**       | 0.9977  | 0.9993 | 0.9981 | 0.9986 |
 |      **5**       | 0.9941  | 0.9978 | 0.9937 | 0.9956 |
 
-### 3D pose stimator performance
+### 3D pose estimator performance
 
 To evaluate the 3D estimation module we use the following metrics: Mean Per Joint Position Error **(MPJPE)**, the Mean Average Precision **(mAP)** and the Mean Recall **(mR)**.
 These metrics are applied to three different test sets:
@@ -46,7 +46,7 @@ git clone https://github.com/gnns4hri/3D_multi_pose_estimator.git
 ```
 Install the dependencies in *requirements.txt*
 
-## Cameras calibration
+## Cameras' calibration
 
 To use our system with your own camera setup, you must first calibrate the cameras to share a common frame of reference. Create a script that generates a pickle file containing the extrinsic matrices for each camera.
 
@@ -54,14 +54,14 @@ We utilized an AprilTag to establish the coordinate origin during calibration. I
 
 Make sure to specify the camera names in the `parameters.py` file creating a new configuration for your environment.
 
-## Dataset generation
+## Datasets
 To train or test a new or existing model, you can use either of the two available datasets or create a new dataset with your own set of cameras. The pre-trained models can be found in the _models_ directory [here](https://www.dropbox.com/sh/6cn6ajddrfkb332/AACg_UpK22BlytWrP19w_VaNa?dl=0). Please note that a pre-trained model must be tested with a dataset that shares the same configuration used during the model's training process.
 
 ### CMU Panoptic and ARP Lab datasets
 
-To download the available datasets for testing our model, visit the _datasets_ directory [here](https://www.dropbox.com/sh/6cn6ajddrfkb332/AACg_UpK22BlytWrP19w_VaNa?dl=0). This includes the ARP Lab and CMU Panoptic datasets. Note that the Panoptic dataset only contains HD cameras with IDs 3, 6, 12, 13, and 23.
+To download the available datasets for testing our model, visit the _datasets_ directory [here](https://www.dropbox.com/sh/6cn6ajddrfkb332/AACg_UpK22BlytWrP19w_VaNa?dl=0). This includes the ARP Lab and CMU Panoptic datasets. To test our proposal on one of these two datasets, set `CONFIGURATION` in `paramters.py` to the dataset name ('PANOPTIC' or 'ARPLAB').
 
-To train the models using a different set of cameras from the [CMU Panoptic dataset](http://domedb.perception.cs.cmu.edu/), download the sequences by following the instructions in the [PanopticStudio Toolbox](https://github.com/CMU-Perceptual-Computing-Lab/panoptic-toolbox). Use the Panoptic toolbox to uncompress the HD images of the sequences for the desired camera IDs. 
+Note that the Panoptic dataset only contains HD cameras with IDs 3, 6, 12, 13, and 23. To train the models using a different set of cameras from the [CMU Panoptic dataset](http://domedb.perception.cs.cmu.edu/), download the sequences by following the instructions in the [PanopticStudio Toolbox](https://github.com/CMU-Perceptual-Computing-Lab/panoptic-toolbox). Use the Panoptic toolbox to uncompress the HD images of the sequences for the desired camera IDs. 
 
 After uncompressing the images, generate a JSON file for each sequence using the scripts in *panoptic_conversor*. Download the backbone model for the CMU Panoptic dataset from the [VoxelPose project](https://github.com/microsoft/voxelpose-pytorch) and place it in the *panoptic_conversor* directory. To generate each training JSON file, run the following commands:
 
@@ -70,7 +70,7 @@ cd panoptic_conversor
 python3 get_joints_from_panoptic_model.py PANOPTIC_SEQUENCE_DIRECTORY
 ```
 
-To generate a JSON file for testing, run *get_joints_from_panoptic_model_multi.py* instead of the previous script. Both scripts generate a JSON file and a Python pickle file containing the transformation matrices of the cameras. This pickle file is necessary for obtaining model metrics.
+To generate a JSON file for testing, run *get_joints_from_panoptic_model_multi.py* instead of the previous script. Both scripts generate a JSON file and a Python pickle file containing the transformation matrices of the cameras.
 
 Remember to modify the Panoptic configuration in `parameters.py` with the new camera information when using this dataset for training.
  
@@ -96,17 +96,16 @@ cd skeleton_matching
 python3 train_skeleton_matching.py --trainset training_jsons --devset dev_jsons --testset test_jsons
 ```
 
-The lists of json files specified for each option should contain more than $1$ JSON file. The number of files in the training set determine the maximum number of people the model will learn to distinguish.
+The lists of JSON files specified for each option should contain more than $1$ file. The number of files in the training set determine the number of people the model will learn to distinguish.
 
 
 #### Commands for training the pose estimator network
 ``` shell
 cd pose_estimator
-python3 train_pose_estimator.py training_jsons 
+python3 train_pose_estimator.py --trainset training_jsons --devset dev_jsons 
 ```
-The `train_json` and `dev_json` file can be created from several json files using the script `merge_jsons.py` in *utils*.
-The `train_json` and `dev_json` file can be created from several json files using the script `merge_jsons.py` in *utils*.
-Note that `training_jsons` must be a path to more than $1$ JSON file.
+
+For each set, $1$ or more JSON files can be specified. For simplicity, a single file can be created from several JSON file using the script `merge_jsons.py` in *utils*.
 
 ## Testing
 
@@ -121,18 +120,18 @@ cd test
 For getting the metrics and visualize the results from our model you will have to run these two scripts:
 
 ``` shell
-python3 metrics_from_model.py test_files test_tm_files_directory
-python3 show_results_from_model.py test_files
+python3 metrics_from_model.py --testfiles test_files --tmdir tm_files_directory --modelsdir models_directory
+python3 show_results_from_model.py --testfile test_file --modelsdir models_directory
 ```
 
 On the other hand, if you want to check the results using triangulation instead of the pose estimation model, the scripts are the following:
 
 ``` shell
-python3 metrics_from_triangulation.py test_files tm_files_directory
-python3 show_results_from_triangulation.py test_files
+python3 metrics_from_triangulation.py --testfiles test_files --tmdir tm_files_directory --modelsdir models_directory
+python3 show_results_from_triangulation.py --testfile test_file --modelsdir models_directory
 ```
 
-The four scripts can be run with more than one json file.
+The two scripts providing metrics can be run with more than one json file.
 
 ## Citation
 
