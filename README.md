@@ -1,6 +1,6 @@
 # Multi person and multi camera 3D pose estimator from unlabelled data
 
-Implementation of the paper - [Multi-person 3D pose estimation from unlabelled data](https://arxiv.org/abs/2212.08731)
+Implementation of an extended version of the paper - [Multi-person 3D pose estimation from unlabelled data](https://arxiv.org/abs/2212.08731)
 
 ## Performance in CMU Panoptic dataset
 
@@ -17,9 +17,11 @@ Higher values, approaching 1, indicate superior performance.
 ### 3D pose stimator performance
 
 To evaluate the 3D estimation module we use the following metrics: Mean Per Joint Position Error **(MPJPE)**, the Mean Average Precision **(mAP)** and the Mean Recall **(mR)**.
-These metrics are applied to two distinct test sets:
+These metrics are applied to three different test sets:
 - **Detected**: Utilizes the 2D skeletons identified by a third-party detector, such as TRT-pose.
 - **Projected**: Uses the projection of the annotated 3D points from the CMU Panoptic Dataset.
+- **Average**: The 2D positions of the keypoints are computed as the average between the detected and projected 2D coordinates.
+
 
 | **Method** | **MEJPE(mm)** | **mAP** | **mR** |
 |:----------:|:-------------:|:-------:|:------:|
@@ -29,9 +31,9 @@ These metrics are applied to two distinct test sets:
 
 |                   **Times/ms**                    |       |
 |:-------------------------------------------------:|:-----:|
-|      $t_{pp}$  (time for persons' proposal)       | 40.89 |
-|     $t_{3Dg}$  (time for 3D pose estimation)      | 36.13 |
-| $t_{3Di}$ (time for 3D pose estimation per human) | 10.62 |
+|      $t_{pp}$  (time for persons' proposal)       | 31.67 |
+|     $t_{3Dg}$  (time for 3D pose estimation)      | 19.65 |
+| $t_{3Di}$ (time for 3D pose estimation per human) | 5.83 |
 
 
 
@@ -46,11 +48,11 @@ Install the dependencies in *requirements.txt*
 
 ## Cameras calibration
 
-To use our system with your own camera setup, you must first calibrate the cameras to share a common frame of reference. Create a script that generates a pickle file containing the intrinsic and extrinsic matrices for each camera.
+To use our system with your own camera setup, you must first calibrate the cameras to share a common frame of reference. Create a script that generates a pickle file containing the extrinsic matrices for each camera.
 
-We utilized an AprilTag to establish the coordinate origin during calibration. In this repository, you will find two sample calibration files: tm_arp.pickle and tm_panoptic.pickle, representing the transformation matrices for ARP lab cameras and CMU Panoptic cameras, respectively. These files contain a dictionary, with camera names as keys and transformation matrices as values.
+We utilized an AprilTag to establish the coordinate origin during calibration. In this repository, you will find two sample calibration files: tm_arp.pickle and tm_panoptic.pickle, representing the transformation matrices for ARP lab cameras and CMU Panoptic cameras, respectively. Each file contains a _TransformManager_ of [pytransform3D](https://dfki-ric.github.io/pytransform3d/) comprising all the transformations between the cameras and the global frame of reference.
 
-Please note that the transformation matrices were obtained using the _pytransform3D_ Python library. Make sure to specify the camera names in the `parameters.py` file creating a new configuration for your environment.
+Make sure to specify the camera names in the `parameters.py` file creating a new configuration for your environment.
 
 ## Dataset generation
 To train or test a new or existing model, you can use either of the two available datasets or create a new dataset with your own set of cameras. The pre-trained models can be found in the _models_ directory [here](https://www.dropbox.com/sh/6cn6ajddrfkb332/AACg_UpK22BlytWrP19w_VaNa?dl=0). Please note that a pre-trained model must be tested with a dataset that shares the same configuration used during the model's training process.
@@ -77,7 +79,7 @@ Remember to modify the Panoptic configuration in `parameters.py` with the new ca
 
 To record your own dataset, follow these steps:
 
-1. **Calibrate your cameras**: Refer to the [cameras calibration section](#cameras-calibration) for instructions on obtaining the transformation pickle file. Specify the path to this file in the appropriate configuration of `parameters.py`, along with the camera numbers and names.
+1. **Calibrate your cameras**: Refer to the [cameras calibration section](#cameras-calibration) for instructions on obtaining the transformation pickle file. Specify the path to this file in the appropriate configuration of `parameters.py`, along with the camera numbers and names, and the intrinsic parameters of the cameras.
 
 2. **Record data & 2D detector**: Capture footage of a single person walking around the environment, covering a wide range of natural walking movements. Yoy can use any third-party 2D detector for this task, such as [TRT-pose](https://github.com/NVIDIA-AI-IOT/trt_pose). Ensure that data from all cameras is as synchronized as possible.
 
@@ -91,18 +93,20 @@ Once the dataset has been generated,  the two networks (matching network and 3D 
 #### Commands for training the skeleton matching network
 ``` shell
 cd skeleton_matching
-python3 train_skeleton_matching.py training_jsons dev_json
+python3 train_skeleton_matching.py --trainset training_jsons --devset dev_jsons --testset test_jsons
 ```
 
-The `dev_json` file can be created from several json files using the script `merge_jsons.py` in *utils*.
+The lists of json files specified for each option should contain more than $1$ JSON file. The number of files in the training set determine the maximum number of people the model will learn to distinguish.
+
 
 #### Commands for training the pose estimator network
 ``` shell
 cd pose_estimator
 python3 train_pose_estimator.py training_jsons 
 ```
-
-Note that `training_jesons` must be a path to more than $1$ JSON file.
+The `train_json` and `dev_json` file can be created from several json files using the script `merge_jsons.py` in *utils*.
+The `train_json` and `dev_json` file can be created from several json files using the script `merge_jsons.py` in *utils*.
+Note that `training_jsons` must be a path to more than $1$ JSON file.
 
 ## Testing
 
