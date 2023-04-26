@@ -81,7 +81,7 @@ To record your own dataset, follow these steps:
 
 1. **Calibrate your cameras**: Refer to the [cameras calibration section](#cameras-calibration) for instructions on obtaining the transformation pickle file. Specify the path to this file in the appropriate configuration of `parameters.py`, along with the camera numbers and names, and the intrinsic parameters of the cameras.
 
-2. **Record data & 2D detector**: Capture footage of a single person walking around the environment, covering a wide range of natural walking movements. Yoy can use any third-party 2D detector for this task, such as [TRT-pose](https://github.com/NVIDIA-AI-IOT/trt_pose). Ensure that data from all cameras is as synchronized as possible.
+2. **Record data & 2D detector**: Capture footage of a single person walking around the environment, covering a wide range of natural walking movements. Yoy can use any third-party 2D detector for this task, such as [TRT-pose](https://github.com/NVIDIA-AI-IOT/trt_pose). Ensure that data from all cameras are as synchronized as possible.
 
 3. **JSON file format**: Save the recorded data as a JSON file. Examine the JSON files from the ARP Lab dataset for the required format. These files contain a list of dictionaries, where each dictionary corresponds to a frame with 2D detections from each camera.
 
@@ -109,29 +109,49 @@ For each set, $1$ or more JSON files can be specified. For simplicity, a single 
 
 ## Testing
 
-To test our models, first download the test files from either dataset in the [CMU Panoptic and ARP Lab datasets section](#cmu-panoptic-and-arp-lab-datasets) and the corresponding pre-trained models from the _models_ directory [here](https://www.dropbox.com/sh/6cn6ajddrfkb332/AACg_UpK22BlytWrP19w_VaNa?dl=0).
+To test our models, first download the test files from either dataset in the [CMU Panoptic and ARP Lab datasets section](#cmu-panoptic-and-arp-lab-datasets) and the corresponding pre-trained models from the _models_ directory [here](https://www.dropbox.com/sh/6cn6ajddrfkb332/AACg_UpK22BlytWrP19w_VaNa?dl=0). In addition, you must set `CONFIGURATION` in `paramters.py` to the dataset name ('PANOPTIC' or 'ARPLAB'). 
 
 Alternatively, if you want to test the models you've trained with your own data, simply record additional data for this purpose. Note that any number of people can be present in these new recordings. Once everything is set up, open a terminal and navigate to the test directory:
 
 ``` shell
 cd test
 ```
+### Metrics
 
-For getting the metrics and visualize the results from the models you will have to run these two scripts:
+To evaluate the models, performance and accuracy metrics can be obtained using the folowing scripts:
 
 ``` shell
 python3 metrics_from_model.py --testfiles test_files --tmdir tm_files_directory --modelsdir models_directory
-python3 show_results_from_model.py --testfile test_file --modelsdir models_directory
+python3 metrics_from_triangulation.py --testfiles test_files --tmdir tm_files_directory --modelsdir models_directory
 ```
+The second script checks the results using triangulation instead of the pose estimation model.
+These scripts only can be run using the CMU Panoptic dataset, since they require a ground truth for comparison purposes.
 
-On the other hand, if you want to check the results using triangulation instead of the pose estimation model, the scripts are the following:
+Accuracy metrics for the models trained with the ARP Lab dataset can be obtained using the following script:
 
 ``` shell
-python3 metrics_from_triangulation.py --testfiles test_files --tmdir tm_files_directory --modelsdir models_directory
+python3 reprojection_error.py --testfiles test_files --modelsdir models_directory
+
+```
+The skeleton-matching model can be tested separately through two additional scripts:
+
+``` shell
+python3 sm_metrics.py --testfiles test_files --tmdir tm_files_directory --modelsdir models_directory
+python3 sm_metrics_without_gt.py --testfiles test_files --modelsdir models_directory
+
+```
+The second one does not require a ground truth, but several test files of individual persons have to be specified to create a ground truth artificially.
+
+### Visualization
+
+Visual results of the estimations can be displayed with these two scripts:
+
+``` shell
+python3 show_results_from_model.py --testfile test_file --modelsdir models_directory
 python3 show_results_from_triangulation.py --testfile test_file --modelsdir models_directory
 ```
+If the files to test include a ground truth, that ground truth can be displayed along with the estimations by adding the arguments `--showgt --tmfile path_to_the_tm_file`.
 
-The two scripts providing metrics can be run with more than one json file.
 
 ## Citation
 
