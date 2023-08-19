@@ -64,7 +64,7 @@ class GraphAttention2(nn.Module):
         self.edge_softmax()
         # 2. compute the aggregated node features scaled by the dropped,
         # unnormalized attention values.
-        self.g.update_all(fn.src_mul_edge('ft', 'a_drop', 'ft'), fn.sum('ft', 'ft'))
+        self.g.update_all(fn.u_mul_e('ft', 'a_drop', 'ft'), fn.sum('ft', 'ft'))
         # 3. apply normalizer
         ret = self.g.ndata['ft'] #/ self.g.ndata['z']  # NxHxD'
         # 4. residual
