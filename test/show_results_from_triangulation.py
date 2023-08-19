@@ -91,7 +91,7 @@ PLOTPERIOD = args.plotperiod  # In miliseconds
 DATASTEP = args.datastep
 CLASSIFICATION_THRESHOLD = 0.5
 
-from pyqtgraph.Qt import QtCore, QtGui
+from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 import pyqtgraph.opengl as gl
 import pyqtgraph as pg
 import numpy as np
@@ -99,7 +99,7 @@ import numpy as np
 class Visualizer(object):
     def __init__(self, period, json_files):
         self.plotLines = dict()
-        self.app = QtGui.QApplication(sys.argv)
+        self.app = QtWidgets.QApplication(sys.argv)
         self.w = gl.GLViewWidget()
         self.w.opts['distance'] = 4
         self.w.setBackgroundColor((255, 255, 255, 255))
@@ -339,7 +339,7 @@ class Visualizer(object):
 
     def start(self):
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-            QtGui.QApplication.instance().exec_()
+            QtWidgets.QApplication.instance().exec_()
 
     def update_step(self, points, lines, points_pid, lines_pid):
         color_list = ['r', 'g', 'b', 'm', 'c', 'y', 'd']
