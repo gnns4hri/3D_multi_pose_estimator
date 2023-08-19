@@ -2,7 +2,11 @@
 
 Implementation of an extended version of the paper - [Multi-person 3D pose estimation from unlabelled data](https://arxiv.org/abs/2212.08731)
 
-https://github.com/gnns4hri/3D_multi_pose_estimator/assets/15211541/5cee1b5f-315c-404a-9664-769832c28f4b
+
+
+https://github.com/gnns4hri/3D_multi_pose_estimator/assets/15211541/dfb18a2e-a59a-45b4-b090-29961f87d613
+
+
 
 ## Performance in CMU Panoptic dataset
 
