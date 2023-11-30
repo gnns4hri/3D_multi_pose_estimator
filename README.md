@@ -54,7 +54,7 @@ Install the dependencies:
 
 - pip3 install -r *requirements.txt*
 - sudo apt install python3-opencv
-- Install DGL with cuda following the instructions from [https://www.dgl.ai/pages/start.html](https://www.dgl.ai/pages/start.html)
+- Install DGL with cuda following the instructions in [https://www.dgl.ai/pages/start.html](https://www.dgl.ai/pages/start.html)
 
 ## Cameras' calibration
 
