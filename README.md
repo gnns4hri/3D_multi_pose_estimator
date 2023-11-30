@@ -29,11 +29,11 @@ These metrics are applied to three different test sets:
 - **Average**: The 2D positions of the keypoints are computed as the average between the detected and projected 2D coordinates.
 
 
-| **Method** | **MEJPE(mm)** | **mAP** | **mR** |
-|:----------:|:-------------:|:-------:|:------:|
-|  Detected  |     26.06     |  89.25  | 92.63  |
-| Projected  |     17.84     |  96.23  | 97.76  |
-|  Average   |     19.77     |  95.67  | 97.39  |
+| **Dataset** | **MPJPE(mm)** | **mAP** | **mR** |
+|:-----------:|:-------------:|:-------:|:------:|
+|   Detected  |     26.06     |  89.25  | 92.63  |
+|  Projected  |     17.84     |  96.23  | 97.76  |
+|   Average   |     19.77     |  95.67  | 97.39  |
 
 |                   **Times/ms**                    |       |
 |:-------------------------------------------------:|:-----:|
@@ -50,7 +50,11 @@ To start using the system you just need to clone this repository on your local m
 ``` shell
 git clone https://github.com/gnns4hri/3D_multi_pose_estimator.git
 ```
-Install the dependencies in *requirements.txt*
+Install the dependencies:
+
+- pip3 install -r *requirements.txt*
+- sudo apt install python3-opencv
+- Install DGL with cuda following the instructions from [https://www.dgl.ai/pages/start.html](https://www.dgl.ai/pages/start.html)
 
 ## Cameras' calibration
 
