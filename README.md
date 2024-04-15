@@ -1,6 +1,6 @@
 # Multi person and multi camera 3D pose estimator from unlabelled data
 
-Implementation of the paper - [Multi-person 3D pose estimation from unlabelled data](https://arxiv.org/abs/2212.08731)
+Implementation of the paper - [Multi-person 3D pose estimation from unlabelled data](https://link.springer.com/article/10.1007/s00138-024-01530-6)
 
 
 
@@ -166,20 +166,6 @@ If the files to test include a ground truth, that ground truth can be displayed 
 ## Citation
 
 ```
-@misc{https://doi.org/10.48550/arxiv.2212.08731,
-  doi = {10.48550/ARXIV.2212.08731},
-  
-  url = {https://arxiv.org/abs/2212.08731},
-  
-  author = {Rodriguez-Criado, Daniel and Bachiller, Pilar and Vogiatzis, George and Manso, Luis J.},
-    
-  title = {Multi-person 3D pose estimation from unlabelled data},
-  
-  publisher = {arXiv},
-  
-  year = {2022},
-  
-  copyright = {Creative Commons Attribution 4.0 International}
-}
+Rodriguez-Criado, D., Bachiller-Burgos, P., Vogiatzis, G. et al. Multi-person 3D pose estimation from unlabelled data. Machine Vision and Applications 35, 46 (2024). https://doi.org/10.1007/s00138-024-01530-6
 
 ```
