@@ -166,6 +166,22 @@ If the files to test include a ground truth, that ground truth can be displayed 
 ## Citation
 
 ```
-Rodriguez-Criado, D., Bachiller-Burgos, P., Vogiatzis, G. et al. Multi-person 3D pose estimation from unlabelled data. Machine Vision and Applications 35, 46 (2024). https://doi.org/10.1007/s00138-024-01530-6
+@article{Rodriguez-Criado2024,
+author={Rodriguez-Criado, Daniel
+and Bachiller-Burgos, Pilar
+and Vogiatzis, George
+and Manso, Luis J.},
+title={Multi-person 3D pose estimation from unlabelled data},
+journal={Machine Vision and Applications},
+year={2024},
+month={Apr},
+day={06},
+volume={35},
+number={3},
+pages={46},
+issn={1432-1769},
+doi={10.1007/s00138-024-01530-6},
+url={https://doi.org/10.1007/s00138-024-01530-6}
+}
 
 ```
