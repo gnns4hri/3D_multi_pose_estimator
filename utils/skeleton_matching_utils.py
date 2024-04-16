@@ -19,7 +19,7 @@ def get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_ca
     matchings = []
     G = nx.Graph()                    # Graph where matching nodes are edges
     # Temporary variables
-    nodes_for_matching = dict()       # A dictionary with mathcing-nodes as keys containing pairs of heads
+    nodes_for_matching = dict()       # A dictionary with matching-nodes as keys containing pairs of heads
     heads_linked_in_cameras = dict()  # A dictionary with head nodes as keys holding a set of linked heads
     head_original_camera = dict()     # A dictionary with head nodes as keys holding in which camera it is
     # Code

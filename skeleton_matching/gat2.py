@@ -12,7 +12,6 @@ import torch.nn as nn
 import dgl.function as fn
 import dgl
 from dgl.ops import edge_softmax as EdgeSoftmax
-# from dgl.nn.pytorch.softmax import EdgeSoftmax
 import torch.nn.functional as F
 
 class GraphAttention2(nn.Module):

@@ -81,7 +81,7 @@ def compute_error(parameters, joints, raw_inputs, orig_inputs, outputs, batch_si
             C = camera_matrices[cam_idx]  # camera matrix
             in_camera = torch.matmul(C, from_camera_with_distorion)
             backprojections = torch.transpose(from_homogeneous(in_camera), 0, 1)
-            # Extract the columns for the neck coordinates in image for camera `cam_idx` (2D)
+            # Extract the columns for the joints' coordinates in image for camera `cam_idx` (2D)
             begin = len(joints) * parameters.numbers_per_joint_for_loss * cam_idx + joint_idx * parameters.numbers_per_joint_for_loss + 1
             end = begin + 2
             coords = orig_inputs[:, begin:end]
@@ -92,7 +92,7 @@ def compute_error(parameters, joints, raw_inputs, orig_inputs, outputs, batch_si
             end = begin + 1
             FILTER = orig_inputs[:, begin:end] < 0.5
 
-            # Ignore error if we do not have the neck!
+            # Ignore error if we do not have the joint!
             error_from_one_cam[FILTER.squeeze()] = 0
             # Add up the error
             error2D += error_from_one_cam
@@ -216,8 +216,6 @@ if __name__ == '__main__':
             loss.backward()
             # Clip the gradients to avoid NaNs
             torch.nn.utils.clip_grad_norm(parameters=mlp.parameters(), max_norm=10, norm_type=2.0)
-            # Gradient Value Clipping
-            # nn.utils.clip_grad_value_(mlp.parameters(), clip_value=1.0)
             # Perform optimization
             optimizer.step()
             # Set current loss

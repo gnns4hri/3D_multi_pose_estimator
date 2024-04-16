@@ -357,20 +357,12 @@ class HumanGraphFromView:
                         self.features[0, all_features.index('world_y')] = world_pos[1]  # / 10.
                         self.features[0, all_features.index('world_z')] = world_pos[2]  # / 10.
 
-                # self.features[0, all_features.index('i_coordinate')] = (values[1][0] - CAMW / 2) / (CAMW / 2)
-                # self.features[0, all_features.index('j_coordinate')] = (CAMH / 2 - values[1][1]) / (CAMH / 2)
 
                 self.features[0, all_features.index('i_coordinate')] = (values[1] - CAMW / 2) / (CAMW / 2)
                 self.features[0, all_features.index('j_coordinate')] = (CAMH / 2 - values[2]) / (CAMH / 2)
                 self.features[0, all_features.index('valid2D')] = 1.
                 self.features[0, all_features.index('probability')] = values[4]
 
-            # elif joint.split('_')[1] == 'elbow' or joint.split('_')[1] == 'eye':  # Special case because the abbreviation has 2 letters (el, ey)
-            #     self.typeMap[max_used_id] = joint[0] + joint.split('_')[1][0] + joint.split('_')[1][1]
-            #     id_by_type[self.typeMap[max_used_id]] = max_used_id
-            # else:
-            #     self.typeMap[max_used_id] = joint[0] + joint.split('_')[1][0]
-            #     id_by_type[self.typeMap[max_used_id]] = max_used_id
             self.features[max_used_id, all_features.index(joint)] = 1.
             self.features[max_used_id, all_features.index(self.camera)] = 1.
             if USING_3D:
@@ -383,8 +375,6 @@ class HumanGraphFromView:
                     self.features[max_used_id, all_features.index('world_y')] = world_pos[1]  # / 10.
                     self.features[max_used_id, all_features.index('world_z')] = world_pos[2]  # / 10.
 
-            # self.features[max_used_id, all_features.index('i_coordinate')] = (values[1][0] - CAMW / 2) / (CAMW / 2)
-            # self.features[max_used_id, all_features.index('j_coordinate')] = (CAMH / 2 - values[1][1]) / (CAMH / 2)
 
             self.features[max_used_id, all_features.index('i_coordinate')] = (values[1] - CAMW / 2) / (CAMW / 2)
             self.features[max_used_id, all_features.index('j_coordinate')] = (CAMH / 2 - values[2]) / (CAMH / 2)
@@ -731,8 +721,7 @@ class MergedMultipleHumansDataset(DGLDataset):
 
                 nodes_camera += cur_nodes_camera
 
-                # `view_heads` is a dictionary: e.g.  view_heads['cam1'], view_heads['cam2']
-                for cam_idx in sample_view:  # This loop is to get the real from the spurious heads
+                for cam_idx in sample_view:  
                     if cam_idx in parameters.used_cameras_skeleton_matching:
                         heads_cam = view_heads[cam_idx]
                         joints_cam = view_num_joints[cam_idx]
@@ -829,7 +818,7 @@ class MergedMultipleHumansDataset(DGLDataset):
         else:
             iterate_over = self.inputs
 
-        for json_view in iterate_over:  # FOR EACH OF THE TUPLE OF SAMPLES (EACH ONE SHOULD HAVE ONE SINGLE PERSON PLUS SPURIOUS)
+        for json_view in iterate_over:  
             if idx % 1000 == 0 and idx > 0:
                 print(idx)
             if idx == self.limit:
@@ -837,23 +826,18 @@ class MergedMultipleHumansDataset(DGLDataset):
             idx += 1
             G = []  # This is an empty graph
 
-            # print(json_view)
 
             #
             # CREATE MAIN NODES
             #
             # number of nodes in the final graph
-            # time0 = time.time()
             total_nodes = 0
             # In the next line `sample_view` would be a _natural_ sample
             view_graph, view_heads, _, n_nodes, nodes_camera = self.load_people_view_graph(json_view,
                                                                                            store_heads_jsons=True)
-            # `view_heads` is a dictionary: e.g.  view_heads['cam1'], view_heads['cam2']
             G = view_graph
             total_nodes += n_nodes
 
-            # time_separated_graphs = time.time()
-            # print("time generating people graphs", time_separated_graphs-time0)
 
             edge_nodes_indices = []
             id_node = total_nodes
@@ -878,9 +862,6 @@ class MergedMultipleHumansDataset(DGLDataset):
                             nodes_camera += ['']
                             id_node += 1
 
-            # time_edge_nodes = time.time()
-            # print("time generating edge_nodes", time_edge_nodes - time_separated_graphs)
-
             if edge_nodes_indices:
                 final_graph = dgl.graph((G.src_nodes, G.dst_nodes), num_nodes=G.n_nodes, idtype=th.int32)
                 final_graph.ndata['h'] = G.features
@@ -888,12 +869,10 @@ class MergedMultipleHumansDataset(DGLDataset):
                                           'norm': th.Tensor(G.edge_norms)})  # , 'he': hgraph.edge_feats})
 
                 # Append final data
-                self.graphs.append(final_graph) #dgl.add_self_loop(final_graph))
+                self.graphs.append(final_graph) 
                 self.labels.append(th.tensor(labels, dtype=th.float64).unsqueeze(1))
                 self.data['edge_nodes_indices'].append(th.tensor(edge_nodes_indices, dtype=th.int64).unsqueeze(1))
                 self.data['nodes_camera'].append(nodes_camera)
-            # time_dgl_graphs = time.time()
-            # print("time generating dgl graphs", time_dgl_graphs-time_edge_nodes)
 
     def __getitem__(self, idx):
         return self.graphs[idx], self.labels[idx], self.data['edge_nodes_indices'][idx], self.data['nodes_camera'][idx]
