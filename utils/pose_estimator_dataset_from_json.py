@@ -70,6 +70,8 @@ def get_3D_from_triangulation(data, skeleton_indices):
                 continue
             skeleton_index = skeleton_indices[cam]
             for j, pos in joints[skeleton_index].items():
+                if j == "ID":
+                    continue
                 if pos[0] > 0.:
                     if not j in points_2D.keys():
                         points_2D[j] = dict()
@@ -173,6 +175,8 @@ class PoseEstimatorDataset(Dataset):
                             continue
                         skeleton = skeleton[skeleton_indices[c]]
                         for j, values in skeleton.items():
+                            if j == "ID":
+                                continue
                             j_offset = int(j) * numbers_per_joint_for_loss
                             error_input[c_offset + j_offset] = values[3]
                             error_input[c_offset + j_offset + 1] = values[1]
@@ -185,6 +189,8 @@ class PoseEstimatorDataset(Dataset):
 
                             cam_from_root = torch.matmul(camera_i_transforms[c_index], torch.tensor([0.0, 0.0, 0.0, 1.0]))  # world to camera transformation matrix, results_3d)
                             for j, values in skeleton.items():
+                                if j == "ID":
+                                    continue
                                 if values[3] < 1.:
                                     continue
                                 flags[used_c_index] = 1
