@@ -282,6 +282,8 @@ class Visualizer(object):
                     pc = person[camera]
                     all_joints_data = scenario.jsons_for_head[pc]
                     for j, pos in all_joints_data.items():
+                        if j == "ID":
+                            continue
                         if not j in points_2D.keys():
                             points_2D[j] = dict()
                         points_2D[j][camera] = np.array([pos[1], pos[2]])
