@@ -297,6 +297,7 @@ class HumanGraphFromView:
         # Compute the number of joints
         self.num_joints = 0
         for j, values in data.items():
+            if j == "ID": continue
             if values[3] > 0.5:
                 self.num_joints += 1
 
@@ -432,6 +433,7 @@ class HumanGraphFromView:
 
         self.num_joints = 0
         for j, values in data.items():
+            if j == "ID": continue
             joint = self.joints[j]
             self.features[0, all_features.index(self.camera + '_' + joint + '_i')] = (values[1] - CAMW / 2) / (CAMW / 2)
             self.features[0, all_features.index(self.camera + '_' + joint + '_j')] = (CAMH / 2 - values[2]) / (CAMH / 2)
@@ -478,6 +480,7 @@ class HumanGraphFromView:
 
         point_list = []
         for j, values in data.items():
+            if j == "ID": continue
             point_list.append([values[1], values[2], 1.0 ])
         if point_list:
             point_list = torch.tensor(point_list).type(torch.float32)
@@ -488,6 +491,7 @@ class HumanGraphFromView:
 
         i_point = 0
         for j, values in data.items():
+            if j == "ID": continue
             joint = self.joints[j]
             self.features[0, all_features.index(self.camera + '_' + joint + '_i')] = (values[1] - CAMW / 2) / (CAMW / 2)
             self.features[0, all_features.index(self.camera + '_' + joint + '_j')] = (CAMH / 2 - values[2]) / (CAMH / 2)
