@@ -252,6 +252,7 @@ class PoseEstimatorDataset(Dataset):
 
                     point_list = []
                     for j, values in skeleton.items():
+                        if j == "ID": continue
                         point_list.append([values[1], values[2]])
                     if point_list:
                         point_list = np.array(point_list)
@@ -265,6 +266,7 @@ class PoseEstimatorDataset(Dataset):
 
                     i_point = 0
                     for j, values in skeleton.items():
+                        if j == "ID": continue
                         j_offset = int(j) * numbers_per_joint
                         output[used_c_offset + j_offset] = values[3]
                         output[used_c_offset + j_offset + 1] = normalize_points[i_point][0] #(values[1] - image_width/2) / (image_width/2) 

@@ -338,7 +338,7 @@ class Visualizer(object):
 
     def start(self):
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-            QtWidgets.QApplication.instance().exec_()
+            QtWidgets.QApplication.instance().exec()
 
     def update_step(self, points, lines, points_pid, lines_pid):
         color_list = ['r', 'g', 'b', 'm', 'c', 'y', 'd']
