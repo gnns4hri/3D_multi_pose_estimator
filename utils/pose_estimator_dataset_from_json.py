@@ -107,7 +107,7 @@ image_width = parameters.image_width
 image_height = parameters.image_height
 
 class PoseEstimatorDataset(Dataset):
-    def __init__(self, input_data, cameras, joint_list, transform=None, data_augmentation=False, reload=False, save=False):
+    def __init__(self, input_data, cameras, joint_list, transform=None, data_augmentation=False, reload=False, save=False, device=None):
         """
             input_data
                -> list[str]: List containing paths to the JSON files.
@@ -232,7 +232,7 @@ class PoseEstimatorDataset(Dataset):
                   
                         if n_loaded % 1000 == 0:
                             print('Loaded', n_loaded, 'of', n_data)
-                    
+
             print(f'Given {given}\nTotal {total}')
         elif type(input_data) is dict:
             skeleton_indices = get_skeleton_indices(input_data)
@@ -290,6 +290,13 @@ class PoseEstimatorDataset(Dataset):
         else:
             raise Exception(f'Invalid dataset input {type(input_data)} for json_files. Only list and dict are allowed.')
 
+        if device is None:
+            self.data = torch.stack(self.data)
+            self.orig_data = torch.stack(self.orig_data)
+        else:
+            self.data = torch.stack(self.data).to(device=device)
+            self.orig_data = torch.stack(self.orig_data).to(device=device)
+
         if save:
              torch.save({
                 'data': self.data,
@@ -297,18 +304,11 @@ class PoseEstimatorDataset(Dataset):
                 }, f'{input_data[-1]}.pytorch')
 
     def __len__(self):
-        return len(self.data)
+        return self.data.shape[0]
 
     def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        try:
-            ret1 = [self.data[x] for x in idx]
-            ret2 = [self.orig_data[x] for x in idx]
-        except TypeError:
-            ret1 = self.data[idx]
-            ret2 = self.orig_data[idx]
+        ret1 = self.data[idx]
+        ret2 = self.orig_data[idx]
 
         if self.transform:
             ret1 = self.transform(ret1)
