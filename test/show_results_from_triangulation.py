@@ -282,6 +282,7 @@ class Visualizer(object):
                     pc = person[camera]
                     all_joints_data = scenario.jsons_for_head[pc]
                     for j, pos in all_joints_data.items():
+                        if j == "ID": continue
                         if not j in points_2D.keys():
                             points_2D[j] = dict()
                         points_2D[j][camera] = np.array([pos[1], pos[2]])
@@ -339,7 +340,7 @@ class Visualizer(object):
 
     def start(self):
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-            QtWidgets.QApplication.instance().exec_()
+            QtWidgets.QApplication.instance().exec()
 
     def update_step(self, points, lines, points_pid, lines_pid):
         color_list = ['r', 'g', 'b', 'm', 'c', 'y', 'd']
