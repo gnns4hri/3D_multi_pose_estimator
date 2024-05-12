@@ -161,8 +161,8 @@ if __name__ == '__main__':
     train_dataset = PoseEstimatorDataset(TRAIN_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=True)
     valid_dataset = PoseEstimatorDataset(DEV_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=True)
 
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=1)
-    valid_dataloader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle=True, num_workers=1)
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=10)
+    valid_dataloader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle=True, num_workers=10)
     print(f'dataset length: {len(train_dataset)}')
 
     # Define loss function and optimizer
