@@ -3,10 +3,11 @@ from tkinter import Y
 
 epochs = 10000
 lr = 1e-6
-batch_size = 10000
+batch_size = 4096
 patience = 20 
 optimise_matrices = False
 
+WHOLE_DATASET_IN_GPU = False
 
 import sys
 import torch
@@ -158,11 +159,15 @@ if __name__ == '__main__':
     mlp = PoseEstimatorMLP(input_dimensions=in_dimensions, output_dimensions=len(joint_list)*3).to(device)
 
     # Load the dataset.
-    train_dataset = PoseEstimatorDataset(TRAIN_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=True)
-    valid_dataset = PoseEstimatorDataset(DEV_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=True)
-
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=10)
-    valid_dataloader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle=True, num_workers=10)
+    print("Loading datasets")
+    if WHOLE_DATASET_IN_GPU is False:
+        data_device = 'cpu'
+    else:
+        data_device = device
+    train_dataset = PoseEstimatorDataset(TRAIN_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=False, device=data_device)
+    valid_dataset = PoseEstimatorDataset(DEV_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=False, device=data_device)
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    valid_dataloader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
     print(f'dataset length: {len(train_dataset)}')
 
     # Define loss function and optimizer
