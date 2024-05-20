@@ -2,8 +2,8 @@ import time
 from tkinter import Y
 
 epochs = 10000
-lr = 1e-6
-batch_size = 4096
+lr = 1e-4
+batch_size = 2096
 patience = 20 
 optimise_matrices = False
 
@@ -164,8 +164,8 @@ if __name__ == '__main__':
         data_device = 'cpu'
     else:
         data_device = device
-    train_dataset = PoseEstimatorDataset(TRAIN_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=False, device=data_device)
-    valid_dataset = PoseEstimatorDataset(DEV_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=False, device=data_device)
+    train_dataset = PoseEstimatorDataset(TRAIN_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=True)
+    valid_dataset = PoseEstimatorDataset(DEV_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=True)
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     valid_dataloader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
     print(f'dataset length: {len(train_dataset)}')
