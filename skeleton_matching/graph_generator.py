@@ -670,7 +670,6 @@ class MergedMultipleHumansDataset(DGLDataset):
             self.process_test()
 
     def process_training(self):
-        freqs = [0 for _ in range(16)]
 
         def sample_and_remove(limit):
             for _ in range(limit):
@@ -694,7 +693,6 @@ class MergedMultipleHumansDataset(DGLDataset):
                         return
                 if len(views_to_add) == 0:
                     continue
-                freqs[len(views_to_add)] += 1
                 yield views_to_add
 
         idx = 0
@@ -811,7 +809,6 @@ class MergedMultipleHumansDataset(DGLDataset):
                 self.data['edge_nodes_indices'].append(th.tensor(edge_nodes_indices, dtype=th.int64).unsqueeze(1))
                 self.data['nodes_camera'].append(nodes_camera)
 
-        print(freqs)
 
     def process_test(self):
         assert len(self.inputs) == 1, "For testing, please provide __ONE__ single JSON file"

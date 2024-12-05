@@ -44,7 +44,7 @@ fields = (
 
 TrackerParameters = namedtuple('TrackerParameters', fields, defaults=(None,) * len(fields))
 
-CONFIGURATION = 'PANOPTIC' # values = {PANOPTIC, ARPLAB}
+CONFIGURATION = 'AIST' #'PANOPTIC' # values = {PANOPTIC, ARPLAB}
 
 #
 #  PARAMETERS
@@ -121,6 +121,34 @@ elif CONFIGURATION == 'ARPLAB':
         graph_alternative='3',
         axes_3D = {'X': (0, 1.), 'Y': (1, 1.), 'Z': (2, -1.)} #For drawing the skeletons: each tuple represents (coordinate index, axis direction)        
     )
+elif CONFIGURATION == 'AIST':
+    parameters = TrackerParameters(
+        image_width=1920,
+        image_height=1080,
+        cameras=[0, 1, 2, 3, 4, 5],
+        camera_names=['c01', 'c02', 'c04', 'c05', 'c06', 'c08'],
+        fx=[1483.9361119758073, 1561.166571954539, 1604.3931815081523, 1386.5776557502095, 1667.3561978839223, 1565.408341712705],
+        fy=[1483.9361119758073, 1561.166571954539, 1604.3931815081523, 1386.5776557502095, 1667.3561978839223, 1565.408341712705],
+        cx=[960.0, 960.0, 960.0, 960.0, 960.0, 960.0],
+        cy=[540.0, 540.0, 540.0, 540.0, 540.0, 540.0],
+        kd0=[0.1373395977080808, 0.16156897795231054, -0.09945789992662554, -0.15615748075841868, -0.052786711044341406, 0.2414519945785073],
+        kd1=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        kd2=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        p1=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        p2=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        joint_list=JOINT_LIST,
+        numbers_per_joint=14, 
+        numbers_per_joint_for_loss=4,
+        transformations_path='../tm_aist_c01c02c04c05c06c08.pickle',
+        used_cameras=['c01', 'c02', 'c04', 'c05', 'c06', 'c08'],
+        used_cameras_skeleton_matching=['c01', 'c02', 'c04', 'c05', 'c06', 'c08'],
+        used_joints = [0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+        min_number_of_views = 2,
+        format=FORMAT,
+        graph_alternative='3',
+        axes_3D = {'X': (0, 1.), 'Y': (1, 1.), 'Z': (2, -1.)} #For drawing the skeletons: each tuple represents (coordinate index, axis direction)
+    )
+
 else:
     print('NO VALID CONFIGURATION')
     exit()
