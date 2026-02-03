@@ -23,7 +23,7 @@ from torch.autograd import Variable
 from torch.utils import data
 
 sys.path.append('../utils')
-from pose_estimator_utils import camera_matrix, get_distortion_coefficients, from_homogeneous, from_homogeneous2, apply_distortion
+from pose_estimator_utils import camera_matrix, get_distortion_coefficients, from_homogeneous, from_homogeneous2, apply_distortion, apply_fisheye_distortion
 from pose_estimator_dataset_from_json import PoseEstimatorDataset
 from mlp import PoseEstimatorMLP
 
@@ -66,7 +66,7 @@ numbers_per_joint = parameters.numbers_per_joint
 number_of_cameras = len(parameters.used_cameras)
 print(f'number of cameras {number_of_cameras}')
 
-def compute_error(parameters, joints, raw_inputs, orig_inputs, outputs, batch_size, camera_d_transforms, camera_matrices, distortion_coefficients):
+def compute_error(parameters, joints, raw_inputs, orig_inputs, outputs, batch_size, camera_d_transforms, camera_matrices, distortion_coefficients, fisheye):
     ones = torch.ones(1, batch_size, device=device)  # useful to convert to homogeneous coordinates
     error2D = torch.zeros(batch_size, device=device)  # we'll add up the 2D error for the batch in this variable
 
@@ -78,7 +78,10 @@ def compute_error(parameters, joints, raw_inputs, orig_inputs, outputs, batch_si
             TR = camera_d_transforms[cam_idx]  # world to camera transformation matrix
             from_camera_3D = torch.matmul(TR, results_3d)[:-1][:]
             from_camera = from_homogeneous2(from_camera_3D)
-            from_camera_with_distorion = apply_distortion(distortion_coefficients[cam_idx], from_camera)
+            if fisheye[cam_idx]:
+                from_camera_with_distorion = apply_fisheye_distortion(distortion_coefficients[cam_idx], from_camera)
+            else:
+                from_camera_with_distorion = apply_distortion(distortion_coefficients[cam_idx], from_camera)
             C = camera_matrices[cam_idx]  # camera matrix
             in_camera = torch.matmul(C, from_camera_with_distorion)
             backprojections = torch.transpose(from_homogeneous(in_camera), 0, 1)
@@ -140,6 +143,7 @@ if __name__ == '__main__':
     camera_d_transforms = []
     camera_matrices = []
     distortion_coefficients = []
+    fisheye = []
 
     for cam_idx, cam in enumerate(parameters.cameras):
         # Add the direct transform (root to camera) to the list
@@ -151,7 +155,8 @@ if __name__ == '__main__':
         camera_i_transforms.append(Variable(torch.from_numpy(trfm_i).type(torch.float32).to(device), requires_grad=optimise_matrices))
         # Add the camera matrix to the list
         camera_matrices.append(Variable(camera_matrix(cam), requires_grad=optimise_matrices))
-        distortion_coefficients.append(Variable(get_distortion_coefficients(cam), requires_grad=optimise_matrices))
+        distortion_coefficients.append(Variable(get_distortion_coefficients(cam,parameters.fisheye[cam]), requires_grad=optimise_matrices))
+        fisheye.append(parameters.fisheye[cam])
 
     # Instantiate the MLP
     in_dimensions = number_of_cameras*len(joint_list)*numbers_per_joint
@@ -211,7 +216,7 @@ if __name__ == '__main__':
             # Compute back projections and add up the error
             #
             error = compute_error(parameters, joint_list, raw_inputs, orig_inputs, outputs, this_batch_size,
-                                    camera_d_transforms, camera_matrices, distortion_coefficients)
+                                    camera_d_transforms, camera_matrices, distortion_coefficients, fisheye)
 
             # Compute loss
             target = torch.zeros(error.size(), device=device)  # We aim for zero error
@@ -247,7 +252,7 @@ if __name__ == '__main__':
                     outputs = mlp(raw_inputs.to(device))
 
                     error = compute_error(parameters, joint_list, raw_inputs, orig_inputs, outputs, this_batch_size,
-                                            camera_d_transforms, camera_matrices, distortion_coefficients)
+                                            camera_d_transforms, camera_matrices, distortion_coefficients, fisheye)
 
                     # Compute loss
                     target = torch.zeros(error.size(), device=device)  # We aim for zero error

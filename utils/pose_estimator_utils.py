@@ -36,9 +36,26 @@ def from_homogeneous2(v):
     return (v/v[-1])
 
 
-def get_distortion_coefficients(cam_idx):
-    kd = [parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.kd2[cam_idx]]
+def get_distortion_coefficients(cam_idx, fisheye=False):
+    if fisheye:
+        kd = [parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.kd2[cam_idx], parameters.kd3[cam_idx]]
+    else:
+        kd = [parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.kd2[cam_idx]]
     return torch.tensor(kd, device = device)
+
+def apply_fisheye_distortion(kd, v):
+    v2 = v.clone()
+    r = torch.norm(v[:-1][:], dim=0)
+    theta = torch.atan(r)
+    theta2 = theta*theta
+    theta4 = theta2*theta2
+    theta6 = theta4*theta2
+    theta8 = theta4*theta4
+    theta_d = theta*(1 + kd[0]*theta2 + kd[1]*theta4 + kd[2]*theta6 + kd[3]*theta8)
+    correction = torch.div(theta_d, r)
+    v2[0][:] = v[0][:]*correction
+    v2[1][:] = v[1][:]*correction
+    return v2
 
 
 def apply_distortion(kd, v):
