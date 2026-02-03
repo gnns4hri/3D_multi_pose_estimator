@@ -1,3 +1,5 @@
+import yaml
+
 from collections import namedtuple
 
 FORMAT = 'COCO'
@@ -47,6 +49,41 @@ fields = (
 TrackerParameters = namedtuple('TrackerParameters', fields, defaults=(None,) * len(fields))
 
 CONFIGURATION = 'PANOPTIC' # values = {PANOPTIC, ARPLAB}
+CONFIGURATION = 'configs/panoptic.yaml'
+
+def generate_tracker_parameters_from_file(config_path):
+    with open(config_path, "r") as f:
+        data = yaml.safe_load(f)
+    return TrackerParameters(
+        image_width = data["image_width"],
+        image_height = data["image_height"],
+        cameras = data["cameras"],
+        camera_names = data["camera_names"],
+        fisheye = data["fisheye"],
+        fx = data["fx"],
+        fy = data["fy"],
+        cx = data["cx"],
+        cy = data["cy"],
+        kd0 = data["kd0"],
+        kd1 = data["kd1"],
+        kd2 = data["kd2"],
+        kd3 = data["kd3"],
+        p1 = data["p1"],
+        p2 = data["p2"],
+        joint_list = data["joint_list"],
+        numbers_per_joint = data["numbers_per_joint"],
+        numbers_per_joint_for_loss = data["numbers_per_joint_for_loss"],
+        transformations_path = data["transformations_path"],
+        used_cameras = data["used_cameras"],
+        used_cameras_skeleton_matching = data["used_cameras_skeleton_matching"],
+        used_joints = data["used_joints"],
+        min_number_of_views = data["min_number_of_views"],
+        format = data["format"],
+        graph_alternative = data["graph_alternative"],
+        axes_3D = { key: tuple(value) for key, value in data["axes_3D"].items() }
+    )
+
+
 
 #
 #  PARAMETERS
@@ -127,7 +164,7 @@ elif CONFIGURATION == 'ARPLAB':
         axes_3D = {'X': (0, 1.), 'Y': (1, 1.), 'Z': (2, -1.)} #For drawing the skeletons: each tuple represents (coordinate index, axis direction)        
     )
 else:
-    print('NO VALID CONFIGURATION')
+    parameters = generate_tracker_parameters_from_file(CONFIGURATION)
     exit()
 
 #
