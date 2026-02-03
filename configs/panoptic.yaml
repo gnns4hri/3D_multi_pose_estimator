@@ -1,0 +1,29 @@
+image_width: 1920
+image_height: 1080
+cameras: [0, 1, 2, 3, 4]
+camera_names: ['trackera', 'trackerb', 'trackerc', 'trackerd', 'trackere']
+fisheye: [False, False, False, False, False]
+fx: [1395.59, 1395.94, 1395.31, 1591.32, 1572.31]
+fy: [1392.03, 1392.22, 1391.77, 1587.2, 1567.51]
+cx: [950.046, 950.459, 966.65, 940.617, 942.938]
+cy: [564.906, 547.877, 562.988, 560.913, 559.888]
+kd0: [-0.28619, -0.279874, -0.284888, -0.232872, -0.237061]
+kd1: [0.179547, 0.166215, 0.179936, 0.194125, 0.18403]
+kd2: [-0.0451919, -0.035049, -0.0468637, 0.0125375, 0.0149481]
+kd3: [0, 0, 0, 0, 0] # for fisheye cameras only
+p1: [-0.00010526, -0.000189415, -0.000119731, 4.22e-05, -0.000448556]
+p2: [6.45495e-05, 0.00107791, 0.000701704, 0.000877748, 0.00062731]
+joint_list: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+numbers_per_joint: 14 
+numbers_per_joint_for_loss: 4
+transformations_path: '../tm_panoptic.pickle'
+used_cameras: ['trackera', 'trackerb', 'trackerc', 'trackerd', 'trackere']
+used_cameras_skeleton_matching: ['trackera', 'trackerb', 'trackerc', 'trackerd', 'trackere']
+used_joints: [0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+min_number_of_views: 2
+format: "COCO"
+graph_alternative: '3'
+axes_3D:
+  'X': [+0, +1.]
+  'Y': [+2, +1.]
+  'Z': [+1, -1.]
