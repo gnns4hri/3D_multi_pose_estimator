@@ -54,6 +54,7 @@ torch.set_grad_enabled(False)
 tm = pickle.load(open(parameters.transformations_path, 'rb'))
 projection_matrices = {}
 distortion_coefficients = {}
+fisheye = {}
 cam_matrix = {}
 camera_i_transforms = []
 
@@ -66,8 +67,11 @@ for cam_idx, cam in enumerate(parameters.camera_names):
     # Add the inverse transform (camera to root) to the list
     camera_i_transforms.append(torch.from_numpy(tm.get_transform(parameters.camera_names[cam_idx], "root")).type(torch.float32))
 
-    distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.p1[cam_idx], parameters.p2[cam_idx], parameters.kd2[cam_idx]])
-
+    if parameters.fisheye[cam_idx]:
+        distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.kd2[cam_idx], parameters.kd3[cam_idx]])
+    else:
+        distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.p1[cam_idx], parameters.p2[cam_idx], parameters.kd2[cam_idx]])
+    fisheye[cam] = parameters.fisheye[cam_idx]
     projection = trfm[0:3, :]
     projection_matrices[cam] = copy.deepcopy(projection)
 
@@ -246,7 +250,7 @@ for file in TEST_FILES:
                                 points_2D[j] = dict()
                             points_2D[j][camera] = np.array([pos[1], pos[2]])
                 
-                result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices, parameters.axes_3D['Y'][0])                    
+                result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices, fisheye, parameters.axes_3D['Y'][0])                    
 
                 number_of_joints = len(parameters.joint_list)
                 x3D = np.zeros(number_of_joints)

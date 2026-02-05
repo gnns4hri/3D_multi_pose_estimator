@@ -52,6 +52,7 @@ tm = pickle.load(open(parameters.transformations_path, 'rb'))
 projection_matrices = {}
 distortion_coefficients = {}
 cam_matrix = {}
+fisheye = {}
 
 
 image_size = (parameters.image_width, parameters.image_height)
@@ -59,13 +60,11 @@ for cam_idx, cam in enumerate(parameters.camera_names):
     # Add the direct transform (root to camera) to the list
     trfm =   tm.get_transform("root", cam)
     cam_matrix[cam] = camera_matrix(cam_idx).cpu().detach().numpy()
-    # if cam in ['orinbot_l', 'orinbot_r']:
-    #     cam_matrix[cam][0][0] = 529.40368652343
-    #     cam_matrix[cam][1][1] = 529.40368652343
-    #     cam_matrix[cam][0][2] = 657.70843505859
-    #     cam_matrix[cam][1][2] = 341.32931518554
-    #     print('change')
-    distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.p1[cam_idx], parameters.p2[cam_idx], parameters.kd2[cam_idx]])
+    if parameters.fisheye[cam_idx]:
+        distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.kd2[cam_idx], parameters.kd3[cam_idx]])
+    else:
+        distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.p1[cam_idx], parameters.p2[cam_idx], parameters.kd2[cam_idx]])
+    fisheye[cam] = parameters.fisheye[cam_idx]        
     projection = trfm[0:3, :]
     projection_matrices[cam] = projection
 
@@ -290,7 +289,7 @@ class Visualizer(object):
                             print('error', pos[3])
 
 
-            result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices, parameters.axes_3D['Y'][0]) 
+            result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices, fisheye, parameters.axes_3D['Y'][0]) 
             # print('3D',result3D)    
             # print('2D', points_2D)
 

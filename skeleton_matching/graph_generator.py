@@ -35,6 +35,7 @@ camera_d_transforms = []
 camera_matrices = []
 inverse_camera_matrices = []
 distortion_coefficients = []
+fisheye = []
 all_cameras_from_root = []
 for cam_idx, cam in enumerate(parameters.cameras):
     if parameters.camera_names[cam_idx] in parameters.used_cameras_skeleton_matching:
@@ -48,7 +49,8 @@ for cam_idx, cam in enumerate(parameters.cameras):
         camera_matrices.append(camera_matrix(cam))
         # Add the inverse camera matrix to the list
         inverse_camera_matrices.append(torch.inverse(camera_matrix(cam)).to('cpu'))
-        distortion_coefficients.append(get_distortion_coefficients(cam))
+        distortion_coefficients.append(get_distortion_coefficients(cam, parameters.fisheye[cam]))
+        fisheye.append(parameters.fisheye[cam])
         all_cameras_from_root.append(torch.matmul(camera_i_transforms[-1], torch.tensor([0.0, 0.0, 0.0, 1.0])))  # world to camera transformation matrix, results_3d)
 
 
