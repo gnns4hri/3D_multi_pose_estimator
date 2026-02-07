@@ -56,12 +56,17 @@ PLOTPERIOD = args.plotperiod  # In miliseconds
 DATASTEP = args.datastep
 CLASSIFICATION_THRESHOLD = 0.5
 
+
+
 from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 import pyqtgraph.opengl as gl
 import pyqtgraph as pg
 import numpy as np
 
 SHOW_GT = args.showgt
+
+
+FISHEYE = parameters.fisheye
 
 if SHOW_GT:
     tm = pickle.load(open(parameters.transformations_path, 'rb'))
@@ -290,7 +295,7 @@ class Visualizer(object):
             if not raw_input:
                 continue
 
-            inputs = PoseEstimatorDataset(raw_input, parameters.cameras, parameters.joint_list, save=False)
+            inputs = PoseEstimatorDataset(raw_input, parameters.cameras, parameters.joint_list, save=False, parameters=parameters)
             inputs = inputs[0][0].reshape([1, inputs[0][0].size()[0]]).to(device)
             batched_input.append(inputs)       
 

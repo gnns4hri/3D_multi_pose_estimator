@@ -63,7 +63,7 @@ def get_skeleton_indices(data):
         skeleton_indices[cam] = index
     return skeleton_indices
 
-def get_3D_from_triangulation(data, skeleton_indices, fisheye):
+def get_3D_from_triangulation(data, skeleton_indices, parameters=parameters):
     points_2D = dict()
     for cam in data.keys():
         if cam in parameters.used_cameras:
@@ -93,12 +93,12 @@ def get_3D_from_triangulation(data, skeleton_indices, fisheye):
                 cam2 = list(points_2D[idx].keys())[comb[1]]
                 point1 = np.array(points_2D[idx][cam1])
                 if fisheye[cam1]:
-                    new_point1 = cv2.fisheye.undistortPoints(np.array([point1]), camera_matrices[cam1], distortion_coefficients[cam1])
+                    new_point1 = cv2.fisheye.undistortPoints(np.array(point1).reshape(1, 1, 2), camera_matrices[cam1], distortion_coefficients[cam1])
                 else:
                     new_point1 = cv2.undistortPoints(np.array([point1]), camera_matrices[cam1], distortion_coefficients[cam1])
                 point2 = np.array(points_2D[idx][cam2])
                 if fisheye[cam2]:
-                    new_point2 = cv2.fisheye.undistortPoints(np.array([point2]), camera_matrices[cam2], distortion_coefficients[cam2])
+                    new_point2 = cv2.fisheye.undistortPoints(np.array(point1, dtype=np.float64).reshape(1, 1, 2), camera_matrices[cam2], distortion_coefficients[cam2])
                 else:
                     new_point2 = cv2.undistortPoints(np.array([point2]), camera_matrices[cam2], distortion_coefficients[cam2])
                 point3d = cv2.triangulatePoints(projection_matrices[cam1], projection_matrices[cam2], new_point1, new_point2)
@@ -116,7 +116,7 @@ image_width = parameters.image_width
 image_height = parameters.image_height
 
 class PoseEstimatorDataset(Dataset):
-    def __init__(self, input_data, cameras, joint_list, transform=None, data_augmentation=False, reload=False, save=False, device=None):
+    def __init__(self, input_data, cameras, joint_list, transform=None, data_augmentation=False, reload=False, save=False, device=None, parameters=parameters):
         """
             input_data
                -> list[str]: List containing paths to the JSON files.
@@ -131,6 +131,7 @@ class PoseEstimatorDataset(Dataset):
         self.numbers_per_joint = numbers_per_joint
         self.numbers_per_joint_for_loss = numbers_per_joint_for_loss
 
+        # fisheye = parameters.fisheye
 
         camera_section_length_total = len(parameters.joint_list)*numbers_per_joint_for_loss  # L joints/skeleton, X numbers/joint.
         camera_section_length_input = len(parameters.joint_list)*numbers_per_joint  # L joints/skeleton, X numbers/joint.
@@ -165,7 +166,7 @@ class PoseEstimatorDataset(Dataset):
                     given += 1
                     flags = [0]*len(parameters.used_cameras)
                     skeleton_indices = get_skeleton_indices(data)
-                    results_3D = get_3D_from_triangulation(data, skeleton_indices)
+                    results_3D = get_3D_from_triangulation(data, skeleton_indices, parameters)
                     error_input = torch.zeros([skeleton_length_total])
                     network_input = torch.zeros([skeleton_length_input])
                     for c in data:  # FOR EACH CAMERA IN A SAMPLE
@@ -212,7 +213,8 @@ class PoseEstimatorDataset(Dataset):
 
                                 point = np.array([values[1], values[2]])
                                 if fisheye[c]:
-                                    undistorted_point = cv2.fisheye.undistortPoints(point, camera_matrices[c], distortion_coefficients[c])
+                                    reshaped_point = np.asarray(point, dtype=np.float64).reshape(-1, 1, 2)
+                                    undistorted_point = cv2.fisheye.undistortPoints(reshaped_point, camera_matrices[c], distortion_coefficients[c])
                                 else:
                                     undistorted_point = cv2.undistortPoints(point, camera_matrices[c], distortion_coefficients[c])
                                 undistorted_pix_ray = torch.from_numpy(undistorted_point[0][0]).type(torch.float32)
@@ -248,7 +250,7 @@ class PoseEstimatorDataset(Dataset):
             print(f'Given {given}\nTotal {total}')
         elif type(input_data) is dict:
             skeleton_indices = get_skeleton_indices(input_data)
-            results_3D = get_3D_from_triangulation(input_data, skeleton_indices)
+            results_3D = get_3D_from_triangulation(input_data, skeleton_indices, parameters)
             output = torch.zeros([skeleton_length_input])
             for c in input_data:
                 if c in parameters.used_cameras:
@@ -271,7 +273,8 @@ class PoseEstimatorDataset(Dataset):
                         norm_factors = np.array([[image_width/2, image_height/2]]*point_list.shape[0])
                         normalize_points = (point_list-norm_factors)/norm_factors                    
                         if fisheye[c]:
-                            undistorted_point_list = cv2.fisheye.undistortPoints(point_list, camera_matrices[c], distortion_coefficients[c]).squeeze(axis=1)
+                            reshaped_point_list = np.asarray(point_list, dtype=np.float64).reshape(-1, 1, 2)
+                            undistorted_point_list = cv2.fisheye.undistortPoints(reshaped_point_list, camera_matrices[c], distortion_coefficients[c]).squeeze(axis=1)
                         else:
                             undistorted_point_list = cv2.undistortPoints(point_list, camera_matrices[c], distortion_coefficients[c]).squeeze(axis=1)
                         undistorted_pix_ray_list = torch.from_numpy(undistorted_point_list).type(torch.float32)
