@@ -120,7 +120,7 @@ class Visualizer(object):
     def init_models(self):
         # Instantiate the MLP
         numbers_per_joint = parameters.numbers_per_joint
-        self.mlp = PoseEstimatorMLP(input_dimensions=len(parameters.used_cameras)*len(parameters.joint_list)*numbers_per_joint, output_dimensions=54)
+        self.mlp = PoseEstimatorMLP(input_dimensions=len(parameters.used_cameras)*len(parameters.joint_list)*numbers_per_joint, output_dimensions=3*len(parameters.joint_list))
         saved = torch.load(MODELSDIR + 'pose_estimator.pytorch', map_location=device)
         self.mlp.load_state_dict(saved['model_state_dict'])
         self.mlp = self.mlp.to(device)

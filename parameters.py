@@ -49,7 +49,7 @@ fields = (
 TrackerParameters = namedtuple('TrackerParameters', fields, defaults=(None,) * len(fields))
 
 CONFIGURATION = 'PANOPTIC' # values = {PANOPTIC, ARPLAB}
-CONFIGURATION = 'configs/panoptic.yaml'
+CONFIGURATION = '../casa/gym.yaml'
 
 def generate_tracker_parameters_from_file(config_path):
     with open(config_path, "r") as f:
@@ -165,7 +165,6 @@ elif CONFIGURATION == 'ARPLAB':
     )
 else:
     parameters = generate_tracker_parameters_from_file(CONFIGURATION)
-    exit()
 
 #
 #  ASSERTS

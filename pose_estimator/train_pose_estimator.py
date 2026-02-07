@@ -1,5 +1,4 @@
 import time
-from tkinter import Y
 
 epochs = 10000
 lr = 1e-4
