@@ -31,6 +31,7 @@ camera_d_transforms = []
 camera_matrices = {}
 distortion_coefficients = {}
 projection_matrices = {}
+fisheye = {}
 
 for cam_iList, cam_idx in enumerate(parameters.cameras):
     cam = parameters.camera_names[cam_iList]
@@ -41,9 +42,11 @@ for cam_iList, cam_idx in enumerate(parameters.cameras):
     camera_i_transforms.append(torch.from_numpy(tm.get_transform(cam, "root")).type(torch.float32))
     # Add the camera matrix to the list
     camera_matrices[cam] = camera_matrix(cam_idx, use_cuda=False).cpu().detach().numpy()
-
-    distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.p1[cam_idx], parameters.p2[cam_idx], parameters.kd2[cam_idx]])
-
+    if parameters.fisheye[cam_idx]:
+        distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.kd2[cam_idx], parameters.kd3[cam_idx]])
+    else:
+        distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.p1[cam_idx], parameters.p2[cam_idx], parameters.kd2[cam_idx]])
+    fisheye[cam] = parameters.fisheye[cam_idx]
     projection_matrices[cam] = trfm[0:3, :]
 
 def get_skeleton_indices(data):
@@ -60,7 +63,7 @@ def get_skeleton_indices(data):
         skeleton_indices[cam] = index
     return skeleton_indices
 
-def get_3D_from_triangulation(data, skeleton_indices):
+def get_3D_from_triangulation(data, skeleton_indices, fisheye):
     points_2D = dict()
     for cam in data.keys():
         if cam in parameters.used_cameras:
@@ -89,9 +92,15 @@ def get_3D_from_triangulation(data, skeleton_indices):
                 cam1 = list(points_2D[idx].keys())[comb[0]]
                 cam2 = list(points_2D[idx].keys())[comb[1]]
                 point1 = np.array(points_2D[idx][cam1])
-                new_point1 = cv2.undistortPoints(np.array([point1]), camera_matrices[cam1], distortion_coefficients[cam1])
+                if fisheye[cam1]:
+                    new_point1 = cv2.fisheye.undistortPoints(np.array([point1]), camera_matrices[cam1], distortion_coefficients[cam1])
+                else:
+                    new_point1 = cv2.undistortPoints(np.array([point1]), camera_matrices[cam1], distortion_coefficients[cam1])
                 point2 = np.array(points_2D[idx][cam2])
-                new_point2 = cv2.undistortPoints(np.array([point2]), camera_matrices[cam2], distortion_coefficients[cam2])
+                if fisheye[cam2]:
+                    new_point2 = cv2.fisheye.undistortPoints(np.array([point2]), camera_matrices[cam2], distortion_coefficients[cam2])
+                else:
+                    new_point2 = cv2.undistortPoints(np.array([point2]), camera_matrices[cam2], distortion_coefficients[cam2])
                 point3d = cv2.triangulatePoints(projection_matrices[cam1], projection_matrices[cam2], new_point1, new_point2)
                 point3d = point3d[0:3]/point3d[3]
 
@@ -201,8 +210,11 @@ class PoseEstimatorDataset(Dataset):
                                 network_input[used_c_offset + used_j_offset + 2] = (values[2] - image_height/2) / (image_height/2)
                                 network_input[used_c_offset + used_j_offset + 3] = values[4]
 
-                                point = np.array([values[1], values[2]])                                
-                                undistorted_point = cv2.undistortPoints(point, camera_matrices[c], distortion_coefficients[c])
+                                point = np.array([values[1], values[2]])
+                                if fisheye[c]:
+                                    undistorted_point = cv2.fisheye.undistortPoints(point, camera_matrices[c], distortion_coefficients[c])
+                                else:
+                                    undistorted_point = cv2.undistortPoints(point, camera_matrices[c], distortion_coefficients[c])
                                 undistorted_pix_ray = torch.from_numpy(undistorted_point[0][0]).type(torch.float32)
                                 pix_ray_from_root = torch.matmul(camera_i_transforms[c_index], torch.cat((undistorted_pix_ray, torch.tensor([1.0, 0.0])))) #perform only rotation
                                 network_input[used_c_offset + used_j_offset + 4: used_c_offset + used_j_offset + 7] = cam_from_root[0:3] / 10.
@@ -258,7 +270,10 @@ class PoseEstimatorDataset(Dataset):
                         point_list = np.array(point_list)
                         norm_factors = np.array([[image_width/2, image_height/2]]*point_list.shape[0])
                         normalize_points = (point_list-norm_factors)/norm_factors                    
-                        undistorted_point_list = cv2.undistortPoints(point_list, camera_matrices[c], distortion_coefficients[c]).squeeze(axis=1)
+                        if fisheye[c]:
+                            undistorted_point_list = cv2.fisheye.undistortPoints(point_list, camera_matrices[c], distortion_coefficients[c]).squeeze(axis=1)
+                        else:
+                            undistorted_point_list = cv2.undistortPoints(point_list, camera_matrices[c], distortion_coefficients[c]).squeeze(axis=1)
                         undistorted_pix_ray_list = torch.from_numpy(undistorted_point_list).type(torch.float32)
                         new_col = torch.tensor([[1.0, 0.0]]*point_list.shape[0])
                         pix_ray_from_root_list = torch.matmul(camera_i_transforms[c_index], torch.cat((undistorted_pix_ray_list, new_col), dim=1).transpose(dim0=1, dim1=0))/10. #perform only rotation

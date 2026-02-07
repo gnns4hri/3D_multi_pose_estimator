@@ -69,6 +69,7 @@ camera_matrices = {}
 distortion_coefficients = {}
 camera_matrices_np = {}
 distortion_coefficients_np = {}
+fisheye = {}
 
 projection_matrices = {}
 for cam_idx, cam in enumerate(parameters.camera_names):
@@ -81,8 +82,12 @@ for cam_idx, cam in enumerate(parameters.camera_names):
 
     camera_matrices[cam] = camera_matrix(cam_idx)
     camera_matrices_np[cam] = camera_matrix(cam_idx).cpu().detach().numpy()
-    distortion_coefficients[cam] = get_distortion_coefficients(cam_idx).to('cpu')
-    distortion_coefficients_np[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.p1[cam_idx], parameters.p2[cam_idx], parameters.kd2[cam_idx]])
+    distortion_coefficients[cam] = get_distortion_coefficients(cam_idx, parameters.fisheye[cam_idx]).to('cpu')
+    if parameters.fisheye[cam_idx]:
+        distortion_coefficients_np[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.kd2[cam_idx], parameters.kd3[cam_idx]])
+    else:
+        distortion_coefficients_np[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.p1[cam_idx], parameters.p2[cam_idx], parameters.kd2[cam_idx]])
+    fisheye[cam] = parameters.fisheye[cam_idx]
     projection_matrices[cam] = trfm[0:3, :]
 
 
@@ -97,10 +102,23 @@ def get_projected_coordinates(p3D, camera):
 
     from_camera_with_distorion = from_camera.clone()
     kd = distortion_coefficients[camera]
+
     r = torch.norm(from_camera[:-1], dim=0)
-    r = r*r
-    from_camera_with_distorion[0] = from_camera[0]*(1 + kd[0]*r + kd[1]*r*r + kd[2]*r*r*r)
-    from_camera_with_distorion[1] = from_camera[1]*(1 + kd[0]*r + kd[1]*r*r + kd[2]*r*r*r)
+
+    if fisheye[camera]:
+        theta = torch.atan(r)
+        theta2 = theta*theta
+        theta4 = theta2*theta2
+        theta6 = theta4*theta2
+        theta8 = theta4*theta4
+        theta_d = theta*(1 + kd[0]*theta2 + kd[1]*theta4 + kd[2]*theta6 + kd[3]*theta8)
+        correction = torch.div(theta_d, r)
+        from_camera_with_distorion[0] = from_camera[0]*correction
+        from_camera_with_distorion[1] = from_camera[1]*correction
+    else:
+        r = r*r
+        from_camera_with_distorion[0] = from_camera[0]*(1 + kd[0]*r + kd[1]*r*r + kd[2]*r*r*r)
+        from_camera_with_distorion[1] = from_camera[1]*(1 + kd[0]*r + kd[1]*r*r + kd[2]*r*r*r)
 
     C = camera_matrices[camera].to('cpu')  # camera matrix
     pt = from_homogeneous(torch.matmul(C, from_camera_with_distorion))
@@ -299,7 +317,7 @@ for file in TEST_FILES:
                                     points_2D[j] = dict()
                                 points_2D[j][cam] = np.array([pos[1], pos[2]])
 
-                triang_3D_person = triangulate(points_2D, camera_matrices_np, distortion_coefficients_np, projection_matrices, parameters.axes_3D['Y'][0])                    
+                triang_3D_person = triangulate(points_2D, camera_matrices_np, distortion_coefficients_np, projection_matrices, fisheye, parameters.axes_3D['Y'][0])                    
 
                 triang_3D.append(triang_3D_person)
 
