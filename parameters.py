@@ -43,7 +43,8 @@ fields = (
     'min_number_of_views',
     'format',
     'graph_alternative',
-    'axes_3D'
+    'axes_3D',
+    'temp'
 )
 
 TrackerParameters = namedtuple('TrackerParameters', fields, defaults=(None,) * len(fields))
@@ -161,7 +162,8 @@ elif CONFIGURATION == 'ARPLAB':
         min_number_of_views = 2,
         format=FORMAT,
         graph_alternative='3',
-        axes_3D = {'X': (0, 1.), 'Y': (1, 1.), 'Z': (2, -1.)} #For drawing the skeletons: each tuple represents (coordinate index, axis direction)        
+        axes_3D = {'X': (0, 1.), 'Y': (1, 1.), 'Z': (2, -1.)}, #For drawing the skeletons: each tuple represents (coordinate index, axis direction)        
+        temp = None
     )
 else:
     parameters = generate_tracker_parameters_from_file(CONFIGURATION)

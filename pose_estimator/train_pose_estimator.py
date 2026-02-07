@@ -36,9 +36,9 @@ import signal
 import argparse
 
 parser = argparse.ArgumentParser(description='3D skeleton prediction training for 3D multi-human pose estimation')
-
 parser.add_argument('--trainset', type=str, nargs='+', required=True, help='List of json files composing the training set')
 parser.add_argument('--devset', type=str, nargs='+', required=True, help='List of json files composing the development set')
+parser.add_argument('--config', type=str, required=True, help='YAML config file')
 
 args = parser.parse_args()
 
@@ -54,12 +54,15 @@ else:
 
 TRAIN_FILES = args.trainset
 DEV_FILES = args.devset
-
+CONFIG = args.config
 print(f'Using {TRAIN_FILES} for training')
 print(f'Using {DEV_FILES} for dev')
 
-sys.path.append('../')
-from parameters import parameters 
+# sys.path.append('../')
+from parameters import generate_tracker_parameters_from_file
+parameters = generate_tracker_parameters_from_file(CONFIG)
+
+
 joint_list = parameters.joint_list
 numbers_per_joint = parameters.numbers_per_joint
 number_of_cameras = len(parameters.used_cameras)
@@ -153,8 +156,8 @@ if __name__ == '__main__':
         # Add the inverse transform (camera to root) to the list
         camera_i_transforms.append(Variable(torch.from_numpy(trfm_i).type(torch.float32).to(device), requires_grad=optimise_matrices))
         # Add the camera matrix to the list
-        camera_matrices.append(Variable(camera_matrix(cam), requires_grad=optimise_matrices))
-        distortion_coefficients.append(Variable(get_distortion_coefficients(cam,parameters.fisheye[cam]), requires_grad=optimise_matrices))
+        camera_matrices.append(Variable(camera_matrix(cam, parameters), requires_grad=optimise_matrices))
+        distortion_coefficients.append(Variable(get_distortion_coefficients(cam,parameters, parameters.fisheye[cam]), requires_grad=optimise_matrices))
         fisheye.append(parameters.fisheye[cam])
 
     # Instantiate the MLP

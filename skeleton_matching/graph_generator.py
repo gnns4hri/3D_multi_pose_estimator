@@ -20,203 +20,213 @@ from data_augmentation import add_data_to_json
 
 graphData = namedtuple('graphData', ['src_nodes', 'dst_nodes', 'n_nodes', 'features', 'edge_types', 'edge_norms'])
 
-sys.path.append('../')
-from parameters import parameters
-
 
 if th.cuda.is_available() is True:
     device = th.device('cuda')
 else:
     device = th.device('cpu')
 
-tm = pickle.load(open(parameters.transformations_path, 'rb'))
-camera_i_transforms = []
-camera_d_transforms = []
-camera_matrices = []
-inverse_camera_matrices = []
-distortion_coefficients = []
-fisheye = []
-all_cameras_from_root = []
-for cam_idx, cam in enumerate(parameters.cameras):
-    if parameters.camera_names[cam_idx] in parameters.used_cameras_skeleton_matching:
-        # Add the direct transform (root to camera) to the list
-        camera_d_transforms.append(
-            torch.from_numpy(tm.get_transform("root", parameters.camera_names[cam_idx])).type(torch.float32))
-        # Add the inverse transform (camera to root) to the list
-        camera_i_transforms.append(
-            torch.from_numpy(tm.get_transform(parameters.camera_names[cam_idx], "root")).type(torch.float32))
-        # Add the camera matrix to the list
-        camera_matrices.append(camera_matrix(cam))
-        # Add the inverse camera matrix to the list
-        inverse_camera_matrices.append(torch.inverse(camera_matrix(cam)).to('cpu'))
-        distortion_coefficients.append(get_distortion_coefficients(cam, parameters.fisheye[cam]))
-        fisheye.append(parameters.fisheye[cam])
-        all_cameras_from_root.append(torch.matmul(camera_i_transforms[-1], torch.tensor([0.0, 0.0, 0.0, 1.0])))  # world to camera transformation matrix, results_3d)
+import types
+
+temp_data = None
+
+def get_working_temp_data(parameters):
+    global temp_data
+    ret = types.SimpleNamespace()
+
+    ret.parameters = parameters
+    
+    ret.tm = pickle.load(open(parameters.transformations_path, 'rb'))
+    ret.camera_i_transforms = []
+    ret.camera_d_transforms = []
+    ret.camera_matrices = []
+    ret.inverse_camera_matrices = []
+    ret.distortion_coefficients = []
+    ret.fisheye = []
+    ret.all_cameras_from_root = []
+    for cam_idx, cam in enumerate(parameters.cameras):
+        if parameters.camera_names[cam_idx] in parameters.used_cameras_skeleton_matching:
+            # Add the direct transform (root to camera) to the list
+            ret.camera_d_transforms.append(
+                torch.from_numpy(ret.tm.get_transform("root", parameters.camera_names[cam_idx])).type(torch.float32))
+            # Add the inverse transform (camera to root) to the list
+            ret.camera_i_transforms.append(
+                torch.from_numpy(ret.tm.get_transform(parameters.camera_names[cam_idx], "root")).type(torch.float32))
+            # Add the camera matrix to the list
+            ret.camera_matrices.append(camera_matrix(cam, parameters))
+            # Add the inverse camera matrix to the list
+            ret.inverse_camera_matrices.append(torch.inverse(camera_matrix(cam, parameters)).to('cpu'))
+            ret.distortion_coefficients.append(get_distortion_coefficients(cam, parameters, parameters.fisheye[cam]))
+            ret.fisheye.append(parameters.fisheye[cam])
+            ret.all_cameras_from_root.append(torch.matmul(ret.camera_i_transforms[-1], torch.tensor([0.0, 0.0, 0.0, 1.0])))  # world to camera transformation matrix, results_3d)
+
+    ret.CAMW = parameters.image_width
+    ret.CAMH = parameters.image_height
+    ret.USING_3D = False
+    ret.USING_WORLD_COORDINATES = False
 
 
-CAMW = parameters.image_width
-CAMH = parameters.image_height
-USING_3D = False
-USING_WORLD_COORDINATES = False
+    ############### CREATE NODES, RELATIONS AND FEATURES TYPES FOR ALL THE ALTERNATIVES ###################
 
+    if parameters.format == 'COCO':
+        ret.JOINTS_TYPES = {'0': "nose", '1': "left_eye", '2': "right_eye", '3': "left_ear", '4': "right_ear",
+                    '5': "left_shoulder", '6': "right_shoulder", '7': "left_elbow", '8': "right_elbow",
+                    '9': "left_wrist", '10': "right_wrist", '11': "left_hip", '12': "right_hip",
+                    '13': "left_knee", '14': "right_knee", '15': "left_ankle", '16': "right_ankle", '17': "neck"}
+    elif parameters.format == 'BODY_25':
+        ret.JOINTS_TYPES = {'0': "nose", '1': "neck", '2': "right_shoulder", '3': "right_elbow", '4': "right_hand",
+                    '5': "left_shoulder", '6': "left_elbow", '7': "left_hand", '8': "hip",
+                    '9': "right_hip", '10': "right_knee", '11': "right_ankle", '12': "left_hip",
+                    '13': "left_knee", '14': "left_ankle", '15': "right_eye", '16': "left_eye", '17': "right_ear",
+                    '18': "left_ear", '19': "left_foot_ball", '20': "left_toes", '21': "left_heel",
+                    '22': "right_foot_ball", '23': "right_toes", '24': "right_heel"}
 
-############### CREATE NODES, RELATIONS AND FEATURES TYPES FOR ALL THE ALTERNATIVES ###################
+    ret.NODE_TYPES_ONE_HOT = ['head', 'edge_node'] + list(ret.JOINTS_TYPES.values())
 
-if parameters.format == 'COCO':
-    JOINTS_TYPES = {'0': "nose", '1': "left_eye", '2': "right_eye", '3': "left_ear", '4': "right_ear",
-                '5': "left_shoulder", '6': "right_shoulder", '7': "left_elbow", '8': "right_elbow",
-                '9': "left_wrist", '10': "right_wrist", '11': "left_hip", '12': "right_hip",
-                '13': "left_knee", '14': "right_knee", '15': "left_ankle", '16': "right_ankle", '17': "neck"}
-elif parameters.format == 'BODY_25':
-    JOINTS_TYPES = {'0': "nose", '1': "neck", '2': "right_shoulder", '3': "right_elbow", '4': "right_hand",
-                '5': "left_shoulder", '6': "left_elbow", '7': "left_hand", '8': "hip",
-                '9': "right_hip", '10': "right_knee", '11': "right_ankle", '12': "left_hip",
-                '13': "left_knee", '14': "left_ankle", '15': "right_eye", '16': "left_eye", '17': "right_ear",
-                '18': "left_ear", '19': "left_foot_ball", '20': "left_toes", '21': "left_heel",
-                '22': "right_foot_ball", '23': "right_toes", '24': "right_heel"}
-
-NODE_TYPES_ONE_HOT = ['head', 'edge_node'] + list(JOINTS_TYPES.values())
-
-if parameters.format == 'COCO':
-    BODY_PARTS = {'e', 'ey', 'n', 's', 'el', 'w', 'hip', 'k', 'a', 'ne'}
-elif parameters.format == 'BODY_25':
-    BODY_PARTS = {'e', 'ey', 'n', 's', 'el', 'hi', 'hip', 'ha', 'he', 'k', 'a', 'ne', 'fb', 'to'}
-else:
-    BODY_PARTS = {}
-# e  = ear          r = right
-# s  = shoulder     l = left
-# el = elbow        b = body (global_node)
-# ey = eye 
-# w  = wrist
-# hip  = hip (left and right) 
-# hi = hip
-# ha = hand
-# he = heel
-# fb = foot_ball
-# k  = knee 
-# a  = ankle 
-# n  = nose 
-# ne = neck 
-# to = toes
-
-BODY_PARTS_ABBREVIATION = {"nose": 'n', "neck": 'ne', "right_shoulder": 'rs', "right_elbow": 'rel', "right_hand": 'rha',
-                "left_shoulder": 'ls', "left_elbow": 'lel', "left_hand": 'lha', "hip": 'hi',
-                "right_hip": 'rhip', "right_knee": 'rk', "right_ankle": 'ra', "left_hip": 'lhip',
-                "left_knee": 'lk', "left_ankle": 'la', "right_eye": 'rey', "left_eye": 'ley', "right_ear": 're',
-                "left_ear": 're', "left_foot_ball": 'lfb', "left_toes": 'lto', "left_heel": 'lhe',
-                "right_foot_ball": 'rfb', "right_toes": 'rto', "right_heel": 'rhe', "right_wrist": 'rw',
-                "left_wrist": 'lw'}
-
-if USING_3D:
-    if USING_WORLD_COORDINATES:
-        JOINT_METRIC_FEATURES = ['x_position', 'y_position', 'z_position', 'i_coordinate', 'j_coordinate', 'valid3D', 'valid2D',
-                'world_x', 'world_y', 'world_z']
+    if parameters.format == 'COCO':
+        ret.BODY_PARTS = {'e', 'ey', 'n', 's', 'el', 'w', 'hip', 'k', 'a', 'ne'}
+    elif parameters.format == 'BODY_25':
+        ret.BODY_PARTS = {'e', 'ey', 'n', 's', 'el', 'hi', 'hip', 'ha', 'he', 'k', 'a', 'ne', 'fb', 'to'}
     else:
-        JOINT_METRIC_FEATURES = ['x_position', 'y_position', 'z_position', 'i_coordinate', 'j_coordinate', 'valid3D', 'valid2D']
-else:
-    JOINT_METRIC_FEATURES = ['i_coordinate', 'j_coordinate', 'valid2D', 'probability']
+        ret.BODY_PARTS = {}
+    # e  = ear          r = right
+    # s  = shoulder     l = left
+    # el = elbow        b = body (global_node)
+    # ey = eye 
+    # w  = wrist
+    # hip  = hip (left and right) 
+    # hi = hip
+    # ha = hand
+    # he = heel
+    # fb = foot_ball
+    # k  = knee 
+    # a  = ankle 
+    # n  = nose 
+    # ne = neck 
+    # to = toes
 
-OTHER_FEATURES = ['n_joints']
+    ret.BODY_PARTS_ABBREVIATION = {"nose": 'n', "neck": 'ne', "right_shoulder": 'rs', "right_elbow": 'rel', "right_hand": 'rha',
+                    "left_shoulder": 'ls', "left_elbow": 'lel', "left_hand": 'lha', "hip": 'hi',
+                    "right_hip": 'rhip', "right_knee": 'rk', "right_ankle": 'ra', "left_hip": 'lhip',
+                    "left_knee": 'lk', "left_ankle": 'la', "right_eye": 'rey', "left_eye": 'ley', "right_ear": 're',
+                    "left_ear": 're', "left_foot_ball": 'lfb', "left_toes": 'lto', "left_heel": 'lhe',
+                    "right_foot_ball": 'rfb', "right_toes": 'rto', "right_heel": 'rhe', "right_wrist": 'rw',
+                    "left_wrist": 'lw'}
 
-FEATURES = {}
-FEATURES['1'] = NODE_TYPES_ONE_HOT + parameters.used_cameras_skeleton_matching + JOINT_METRIC_FEATURES + OTHER_FEATURES
-FEATURES['2'] = ['head', 'edge_node']
-for cam in parameters.used_cameras_skeleton_matching:
-    for p in JOINTS_TYPES.values():
-        FEATURES['2'].append(cam + '_' + p + '_i')
-        FEATURES['2'].append(cam + '_' + p + '_j')
-        FEATURES['2'].append(cam + '_' + p + '_valid')
-        FEATURES['2'].append(cam + '_' + p + '_prob')
-FEATURES['3'] = ['head', 'edge_node']
-for cam in parameters.used_cameras_skeleton_matching:
-    for p in JOINTS_TYPES.values():
-        FEATURES['3'].append(cam + '_' + p + '_i')
-        FEATURES['3'].append(cam + '_' + p + '_j')
-        FEATURES['3'].append(cam + '_' + p + '_valid')
-        FEATURES['3'].append(cam + '_' + p + '_prob')
-        FEATURES['3'].append(cam + '_' + p + '_line_pX')
-        FEATURES['3'].append(cam + '_' + p + '_line_pY')
-        FEATURES['3'].append(cam + '_' + p + '_line_pZ')
-        FEATURES['3'].append(cam + '_' + p + '_line_vX')
-        FEATURES['3'].append(cam + '_' + p + '_line_vY')
-        FEATURES['3'].append(cam + '_' + p + '_line_vZ')
-
-
-if parameters.format == 'COCO':
-    BODY_RELS = {'s_el', 'el_w', 's_hip', 'hip_k', 'k_a', 'n_e', 'n_ne', 'ne_s', 'n_ey'}
-elif parameters.format == 'BODY_25':
-    BODY_RELS = {'e_ey', 'n_ey', 'n_ne', 'ne_s', 's_el', 'el_ha', 'ne_hi', 'hi_hip', 'hip_k', 'k_a', 'a_he', 'a_fb',
-            'fb_to'}
-else:
-    BODY_RELS = {}
-
-RELATIONS = {}
-RELATIONS['1'] = set()
-# Add body relations
-for relations in BODY_RELS:
-    split = relations.split('_')
-    if split[0] == 'n':
-        if split[1] == 'ne':
-            RELATIONS['1'].add(relations)
+    if ret.USING_3D:
+        if ret.USING_WORLD_COORDINATES:
+            JOINT_METRIC_FEATURES = ['x_position', 'y_position', 'z_position', 'i_coordinate', 'j_coordinate', 'valid3D', 'valid2D',
+                    'world_x', 'world_y', 'world_z']
         else:
-            RELATIONS['1'].add(split[0] + '_' + 'r' + split[1])
-            RELATIONS['1'].add(split[0] + '_' + 'l' + split[1])
-    elif split[0] == 'ne':
-        if split[1] == 'hi':
-            RELATIONS['1'].add(relations)
+            JOINT_METRIC_FEATURES = ['x_position', 'y_position', 'z_position', 'i_coordinate', 'j_coordinate', 'valid3D', 'valid2D']
+    else:
+        JOINT_METRIC_FEATURES = ['i_coordinate', 'j_coordinate', 'valid2D', 'probability']
+
+    ret.OTHER_FEATURES = ['n_joints']
+
+    ret.FEATURES = {}
+    ret.FEATURES['1'] = ret.NODE_TYPES_ONE_HOT + parameters.used_cameras_skeleton_matching + JOINT_METRIC_FEATURES + ret.OTHER_FEATURES
+    ret.FEATURES['2'] = ['head', 'edge_node']
+    for cam in parameters.used_cameras_skeleton_matching:
+        for p in ret.JOINTS_TYPES.values():
+            ret.FEATURES['2'].append(cam + '_' + p + '_i')
+            ret.FEATURES['2'].append(cam + '_' + p + '_j')
+            ret.FEATURES['2'].append(cam + '_' + p + '_valid')
+            ret.FEATURES['2'].append(cam + '_' + p + '_prob')
+    ret.FEATURES['3'] = ['head', 'edge_node']
+    for cam in parameters.used_cameras_skeleton_matching:
+        for p in ret.JOINTS_TYPES.values():
+            ret.FEATURES['3'].append(cam + '_' + p + '_i')
+            ret.FEATURES['3'].append(cam + '_' + p + '_j')
+            ret.FEATURES['3'].append(cam + '_' + p + '_valid')
+            ret.FEATURES['3'].append(cam + '_' + p + '_prob')
+            ret.FEATURES['3'].append(cam + '_' + p + '_line_pX')
+            ret.FEATURES['3'].append(cam + '_' + p + '_line_pY')
+            ret.FEATURES['3'].append(cam + '_' + p + '_line_pZ')
+            ret.FEATURES['3'].append(cam + '_' + p + '_line_vX')
+            ret.FEATURES['3'].append(cam + '_' + p + '_line_vY')
+            ret.FEATURES['3'].append(cam + '_' + p + '_line_vZ')
+
+
+    if parameters.format == 'COCO':
+        ret.BODY_RELS = {'s_el', 'el_w', 's_hip', 'hip_k', 'k_a', 'n_e', 'n_ne', 'ne_s', 'n_ey'}
+    elif parameters.format == 'BODY_25':
+        ret.BODY_RELS = {'e_ey', 'n_ey', 'n_ne', 'ne_s', 's_el', 'el_ha', 'ne_hi', 'hi_hip', 'hip_k', 'k_a', 'a_he', 'a_fb',
+                'fb_to'}
+    else:
+        ret.BODY_RELS = {}
+
+    ret.RELATIONS = {}
+    ret.RELATIONS['1'] = set()
+    # Add body relations
+    for relations in ret.BODY_RELS:
+        split = relations.split('_')
+        if split[0] == 'n':
+            if split[1] == 'ne':
+                ret.RELATIONS['1'].add(relations)
+            else:
+                ret.RELATIONS['1'].add(split[0] + '_' + 'r' + split[1])
+                ret.RELATIONS['1'].add(split[0] + '_' + 'l' + split[1])
+        elif split[0] == 'ne':
+            if split[1] == 'hi':
+                ret.RELATIONS['1'].add(relations)
+            else:
+                ret.RELATIONS['1'].add(split[0] + '_' + 'r' + split[1])
+                ret.RELATIONS['1'].add(split[0] + '_' + 'l' + split[1])
+        elif split[0] == 'hi':
+            ret.RELATIONS['1'].add(split[0] + '_' + 'r' + split[1])
+            ret.RELATIONS['1'].add(split[0] + '_' + 'l' + split[1])
         else:
-            RELATIONS['1'].add(split[0] + '_' + 'r' + split[1])
-            RELATIONS['1'].add(split[0] + '_' + 'l' + split[1])
-    elif split[0] == 'hi':
-        RELATIONS['1'].add(split[0] + '_' + 'r' + split[1])
-        RELATIONS['1'].add(split[0] + '_' + 'l' + split[1])
-    else:
-        RELATIONS['1'].add('r' + split[0] + '_' + 'r' + split[1])
-        RELATIONS['1'].add('l' + split[0] + '_' + 'l' + split[1])
-# Add pair relations, relations with body (global node) and self relations
-for part in BODY_PARTS:
-    if part == 'n':
-        RELATIONS['1'].add('h_n')
-        RELATIONS['1'].add('n_n')  # self-loop
-    elif part == 'ne':
-        RELATIONS['1'].add('h_ne')
-        RELATIONS['1'].add('ne_ne')  # self-loop
-    elif part == 'hi':
-        RELATIONS['1'].add('h_hi')
-        RELATIONS['1'].add('hi_hi')  # self-loop
-    else:
-        RELATIONS['1'].add('r' + part + '_' + 'l' + part)
-        RELATIONS['1'].add('r' + part + '_' + 'r' + part)  # self-loops
-        RELATIONS['1'].add('l' + part + '_' + 'l' + part)  # self-loops
-        RELATIONS['1'].add('h' + '_' + 'r' + part)
-        RELATIONS['1'].add('h' + '_' + 'l' + part)
-# Adding inverses
-for e in list(RELATIONS['1']):
-    split = e.split('_')
-    RELATIONS['1'].add(split[1] + '_' + split[0])
-# Add global self relations
-RELATIONS['1'].add('h_h')  # self-loop
-# Add relation to edge-nodes
-RELATIONS['1'].add('link')
-RELATIONS['1'].add('link_link')
-RELATIONS['2'] = set()
-RELATIONS['2'].add('h_h')  # self-loop
-# Add relation to edge-nodes
-RELATIONS['2'].add('link')
-RELATIONS['2'].add('link_link')
-RELATIONS['3'] = set()
-RELATIONS['3'].add('h_h')  # self-loop
-# Add relation to edge-nodes
-RELATIONS['3'].add('link')
-RELATIONS['3'].add('link_link')
-for alt in RELATIONS:
-    RELATIONS[alt] = sorted(list(RELATIONS[alt]))
-######################################################################
+            ret.RELATIONS['1'].add('r' + split[0] + '_' + 'r' + split[1])
+            ret.RELATIONS['1'].add('l' + split[0] + '_' + 'l' + split[1])
+    # Add pair relations, relations with body (global node) and self relations
+    for part in ret.BODY_PARTS:
+        if part == 'n':
+            ret.RELATIONS['1'].add('h_n')
+            ret.RELATIONS['1'].add('n_n')  # self-loop
+        elif part == 'ne':
+            ret.RELATIONS['1'].add('h_ne')
+            ret.RELATIONS['1'].add('ne_ne')  # self-loop
+        elif part == 'hi':
+            ret.RELATIONS['1'].add('h_hi')
+            ret.RELATIONS['1'].add('hi_hi')  # self-loop
+        else:
+            ret.RELATIONS['1'].add('r' + part + '_' + 'l' + part)
+            ret.RELATIONS['1'].add('r' + part + '_' + 'r' + part)  # self-loops
+            ret.RELATIONS['1'].add('l' + part + '_' + 'l' + part)  # self-loops
+            ret.RELATIONS['1'].add('h' + '_' + 'r' + part)
+            ret.RELATIONS['1'].add('h' + '_' + 'l' + part)
+    # Adding inverses
+    for e in list(ret.RELATIONS['1']):
+        split = e.split('_')
+        ret.RELATIONS['1'].add(split[1] + '_' + split[0])
+    # Add global self relations
+    ret.RELATIONS['1'].add('h_h')  # self-loop
+    # Add relation to edge-nodes
+    ret.RELATIONS['1'].add('link')
+    ret.RELATIONS['1'].add('link_link')
+    ret.RELATIONS['2'] = set()
+    ret.RELATIONS['2'].add('h_h')  # self-loop
+    # Add relation to edge-nodes
+    ret.RELATIONS['2'].add('link')
+    ret.RELATIONS['2'].add('link_link')
+    ret.RELATIONS['3'] = set()
+    ret.RELATIONS['3'].add('h_h')  # self-loop
+    # Add relation to edge-nodes
+    ret.RELATIONS['3'].add('link')
+    ret.RELATIONS['3'].add('link_link')
+    for alt in ret.RELATIONS:
+        ret.RELATIONS[alt] = sorted(list(ret.RELATIONS[alt]))
+
+
+    temp_data = ret
+    return ret
+    ######################################################################
+
+
 
 class HumanGraphFromView:
-    joints = JOINTS_TYPES
-
-    def __init__(self, data, camera, alt):
+    def __init__(self, data, parameters, camera, alt):
         super(HumanGraphFromView, self).__init__()
         self.labels = None
         self.num_rels = -1
@@ -231,8 +241,9 @@ class HumanGraphFromView:
         self.position_by_id = None
         self.typeMap = None
         self.camera = camera
+        self.parameters = parameters
         self.camera_idx = parameters.used_cameras_skeleton_matching.index(self.camera)
-        self.cam_from_root = all_cameras_from_root[self.camera_idx] 
+        self.cam_from_root = temp_data.all_cameras_from_root[self.camera_idx] 
 
         if alt == '1':
             self.initializeWithAlternative1(data)
@@ -246,41 +257,49 @@ class HumanGraphFromView:
 
     @staticmethod
     def get_node_types_one_hot():
-        return NODE_TYPES_ONE_HOT
+        global temp_data
+        return temp_data.NODE_TYPES_ONE_HOT
 
     @staticmethod
     def get_cam_types():
-        return parameters.used_cameras_skeleton_matching
+        global temp_data
+        return temp_data.used_cameras_skeleton_matching
 
     @staticmethod
     def get_body_parts():
-        return BODY_PARTS
-
+        global temp_data
+        return temp_data.BODY_PARTS
 
     @staticmethod
     def get_body_part_abbreviation():
-        return BODY_PARTS_ABBREVIATION
+        global temp_data
+        return temp_data.BODY_PARTS_ABBREVIATION
 
     @staticmethod
     def get_body_rels():
-        return BODY_RELS
+        global temp_data
+        return temp_data.BODY_RELS
 
     @staticmethod
     def get_all_features(alt='1'):
-        return FEATURES[alt]
+        global temp_data
+        return temp_data.FEATURES[alt]
 
     @staticmethod
     def get_joint_metric_features():
-        return JOINT_METRIC_FEATURES
+        global temp_data
+        return temp_data.JOINT_METRIC_FEATURES
 
     @staticmethod
     def get_other_features():
-        return OTHER_FEATURES
+        global temp_data
+        return temp_data.OTHER_FEATURES
         
 
     @staticmethod
     def get_rels(alt='1'):
-        return RELATIONS[alt]
+        global temp_data
+        return temp_data.RELATIONS[alt]
 
     def initializeWithAlternative1(self, data):
 
@@ -339,7 +358,7 @@ class HumanGraphFromView:
                     cam_idx = cameras.index(self.camera)
                     world_pos = torch.Tensor(values[2][0:3] + [1.])
 
-                    TR = camera_i_transforms[cam_idx]
+                    TR = temp_data.camera_i_transforms[cam_idx]
                     world_pos = torch.matmul(TR, world_pos)
                     world_pos = from_homogeneous(world_pos)
 
@@ -487,16 +506,16 @@ class HumanGraphFromView:
         if point_list:
             point_list = torch.tensor(point_list).type(torch.float32)
             zeros = torch.tensor([[0.0]*point_list.shape[0]])
-            pix_ray_list = torch.matmul(inverse_camera_matrices[self.camera_idx],point_list.transpose(dim0=1,dim1=0))
-            pix_ray_from_root_list = torch.matmul(camera_i_transforms[self.camera_idx], torch.cat((pix_ray_list, zeros)))
+            pix_ray_list = torch.matmul(temp_data.inverse_camera_matrices[self.camera_idx],point_list.transpose(dim0=1,dim1=0))
+            pix_ray_from_root_list = torch.matmul(temp_data.camera_i_transforms[self.camera_idx], torch.cat((pix_ray_list, zeros)))
             pix_ray_from_root_list = pix_ray_from_root_list.transpose(dim0=1, dim1=0)
 
         i_point = 0
         for j, values in data.items():
             if j == "ID": continue
-            joint = self.joints[j]
-            self.features[0, all_features.index(self.camera + '_' + joint + '_i')] = (values[1] - CAMW / 2) / (CAMW / 2)
-            self.features[0, all_features.index(self.camera + '_' + joint + '_j')] = (CAMH / 2 - values[2]) / (CAMH / 2)
+            joint = temp_data.JOINTS_TYPES[j]
+            self.features[0, all_features.index(self.camera + '_' + joint + '_i')] = (values[1] - temp_data.CAMW / 2) / (temp_data.CAMW / 2)
+            self.features[0, all_features.index(self.camera + '_' + joint + '_j')] = (temp_data.CAMH / 2 - values[2]) / (temp_data.CAMH / 2)
             self.features[0, all_features.index(self.camera + '_' + joint + '_valid')] = values[3]
             self.features[0, all_features.index(self.camera + '_' + joint + '_prob')] = values[4]
             self.features[0, all_features.index(self.camera + '_' + joint + '_line_pX')] = self.cam_from_root[0]
@@ -518,7 +537,7 @@ class HumanGraphFromView:
 class MergedMultipleHumansDataset(DGLDataset):
     path_save = 'cache/'
 
-    def __init__(self, paths, probabilities=[1.], limit='100000000', alt=None, mode='train', force_reload=False,
+    def __init__(self, paths, parameters, probabilities=[1.], limit='100000000', alt=None, mode='train', force_reload=False,
                  verbose=True,
                  debug=False, raw_dir='.'):
         if alt is None:
@@ -526,12 +545,13 @@ class MergedMultipleHumansDataset(DGLDataset):
             sys.exit(-1)
         self.inputs = []
         self.inputs_indices = []
+        self.parameters = parameters
         if type(paths) == list:
             for path in paths:
                 print('PATH', path)
                 input_data_from_a_file = json.loads(open(path, "rb").read())
                 if mode != 'test' and mode != 'test_generated':
-                    input_data_from_a_file = add_data_to_json(input_data_from_a_file, 2)
+                    input_data_from_a_file = add_data_to_json(input_data_from_a_file, parameters, 2)
                 input_indices = list(range(len(input_data_from_a_file)))
                 if mode != 'test':
                     random.shuffle(input_indices)
@@ -564,7 +584,7 @@ class MergedMultipleHumansDataset(DGLDataset):
         self.device = device
         self.limit = limit
 
-        super(MergedMultipleHumansDataset, self).__init__("MergedMultipleHumansDataset", raw_dir=".",
+        super(MergedMultipleHumansDataset, self).__init__("MergedMultipleHumansDataset", parameters, raw_dir=".",
                                                           force_reload=self.force_reload, verbose=verbose)
 
     def get_dataset_name(self):
@@ -572,10 +592,11 @@ class MergedMultipleHumansDataset(DGLDataset):
         info_path = self.name + '_info_' + self.mode + '_alt_' + self.alt + '_s_' + str(self.limit) + '.pkl'
         return graphs_path, info_path
 
-    def load_people_view_graph(self, sample_view, store_heads_jsons=False):
+    def load_people_view_graph(self, sample_view, parameters, store_heads_jsons=False):
         view_graph = []
         view_heads = {}
         view_heads_num_joints = {}
+        
 
         self.jsons_for_head = dict()
         self.skeleton_index = dict()
@@ -588,7 +609,7 @@ class MergedMultipleHumansDataset(DGLDataset):
                 view_heads_num_joints[camera] = []
                 for idx, skeleton in enumerate(
                         json.loads(sample_view[camera][0])):
-                    hgraph = HumanGraphFromView(skeleton, camera, self.alt)
+                    hgraph = HumanGraphFromView(skeleton, parameters, camera, self.alt)
                     if hgraph.num_joints == 0:
                         continue
                     skeleton_graph = graphData(hgraph.src_nodes, hgraph.dst_nodes, hgraph.n_nodes, hgraph.features,
@@ -720,8 +741,7 @@ class MergedMultipleHumansDataset(DGLDataset):
             for sample_view in multi_person:  # FOR EACH PERSON IN THE (PLUS SPURIOUS)
                 person_heads = []
                 # In the next line, `sample_view` would be a _natural_ sample
-                view_graph, view_heads, view_num_joints, n_nodes, cur_nodes_camera = self.load_people_view_graph(
-                    sample_view)
+                view_graph, view_heads, view_num_joints, n_nodes, cur_nodes_camera = self.load_people_view_graph(sample_view, parameters)
 
                 nodes_camera += cur_nodes_camera
 
@@ -836,8 +856,7 @@ class MergedMultipleHumansDataset(DGLDataset):
             # number of nodes in the final graph
             total_nodes = 0
             # In the next line `sample_view` would be a _natural_ sample
-            view_graph, view_heads, _, n_nodes, nodes_camera = self.load_people_view_graph(json_view,
-                                                                                           store_heads_jsons=True)
+            view_graph, view_heads, _, n_nodes, nodes_camera = self.load_people_view_graph(json_view, self.parameters, store_heads_jsons=True)
             G = view_graph
             total_nodes += n_nodes
 

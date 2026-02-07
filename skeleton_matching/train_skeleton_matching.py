@@ -15,7 +15,7 @@ from gat2 import GAT2 as GAT
 
 from torch.utils.data import DataLoader
 
-from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
+from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView, get_working_temp_data
 
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
@@ -25,8 +25,14 @@ parser = argparse.ArgumentParser(description='Skeleton-matching training for 3D 
 parser.add_argument('--trainset', type=str, nargs='+', required=True, help='List of json files composing the training set')
 parser.add_argument('--devset', type=str, nargs='+', required=True, help='List of json files composing the development set')
 parser.add_argument('--testset', type=str, nargs='+', required=True, help='List of json files composing the test set')
-
+parser.add_argument('--config', type=str, required=True, help='YAML config file')
 args = parser.parse_args()
+
+sys.path.append('../')
+from parameters import generate_tracker_parameters_from_file
+
+parameters = generate_tracker_parameters_from_file(args.config)
+get_working_temp_data(parameters)
 
 # CONSTANTS
 USE_BCE = False
@@ -131,9 +137,9 @@ for json_paths in [train_paths, dev_paths, test_paths]:
     assert len(json_paths) == len(probabilities_set), "the lists of json files and probabilities must be the same length"
     probabilities.append(probabilities_set)
 
-train_dataset = MergedMultipleHumansDataset(train_paths, probabilities[0], limit=limit, mode='train', alt=alt, raw_dir='.')
-valid_dataset = MergedMultipleHumansDataset(dev_paths, probabilities[1], limit=limit, mode='dev', alt=alt, raw_dir='.')
-test_dataset = MergedMultipleHumansDataset(test_paths, probabilities[2], limit=limit, mode='dev', alt=alt, raw_dir='.')
+train_dataset = MergedMultipleHumansDataset(train_paths, parameters, probabilities[0], limit=limit, mode='train', alt=alt, raw_dir='.')
+valid_dataset = MergedMultipleHumansDataset(dev_paths, parameters, probabilities[1], limit=limit, mode='dev', alt=alt, raw_dir='.')
+test_dataset = MergedMultipleHumansDataset(test_paths, parameters,  probabilities[2], limit=limit, mode='dev', alt=alt, raw_dir='.')
 print(f'Dataset load time: {time.time()-timea}.')
 
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=collate)

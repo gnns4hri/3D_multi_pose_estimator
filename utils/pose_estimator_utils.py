@@ -5,8 +5,6 @@ import numpy as np
 import itertools
 import cv2
 
-sys.path.append('../')
-from parameters import parameters
 
 if torch.cuda.is_available() is True:
     device = torch.device('cuda')
@@ -14,7 +12,7 @@ else:
     device = torch.device('cpu')
 
 
-def camera_matrix(cam_idx, use_cuda=True):
+def camera_matrix(cam_idx, parameters, use_cuda=True):
     fx = parameters.fx[cam_idx]
     fy = parameters.fy[cam_idx]
     cx = parameters.cx[cam_idx]
@@ -36,7 +34,7 @@ def from_homogeneous2(v):
     return (v/v[-1])
 
 
-def get_distortion_coefficients(cam_idx, fisheye=False):
+def get_distortion_coefficients(cam_idx, parameters, fisheye=False):
     if fisheye:
         kd = [parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.kd2[cam_idx], parameters.kd3[cam_idx]]
     else:
@@ -66,7 +64,7 @@ def apply_distortion(kd, v):
     v2[1][:] = v[1][:]*(1 + kd[0]*r + kd[1]*r*r + kd[2]*r*r*r)
     return v2
 
-def triangulate(points_2D, camera_matrices, distortion_coefficients, projection_matrices, fisheye, median_chek_axis):
+def triangulate(points_2D, camera_matrices, distortion_coefficients, projection_matrices, fisheye, median_chek_axis, parameters):
     result3D = dict()
     for idx_i in parameters.joint_list:
         idx = str(idx_i)

@@ -21,9 +21,6 @@ from mlp import PoseEstimatorMLP
 from skeleton_matching_utils import get_person_proposal_from_network_output
 
 
-sys.path.append('../')
-from parameters import parameters 
-
 parser = argparse.ArgumentParser(description='Compute the reprojection error, for each camera, of the estimated 3D, triangulated 3D and, optionally, ground truth 3D')
 
 parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='List of json files used as input')
@@ -31,9 +28,14 @@ parser.add_argument('--showgt', action='store_true', help='Show ground truth rep
 parser.add_argument('--tmdir', type=str, nargs=1, help='Directory that contains the files with the transfomation matrices of the ground truth')
 parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
 parser.add_argument('--datastep', type=int, nargs='?', required=False, default=12, help='Data step used to compute the reprojection error')
-
-
+parser.add_argument('--config', type=str, required=True, help='YAML config file')
 args = parser.parse_args()
+
+sys.path.append('../')
+# from parameters import parameters 
+from parameters import generate_tracker_parameters_from_file
+parameters = generate_tracker_parameters_from_file(args.config)
+
 
 if args.showgt and args.tmdir is None:
     parser.error("--showgt requires --tmdir")
@@ -80,8 +82,8 @@ for cam_idx, cam in enumerate(parameters.camera_names):
 
     camera_i_transforms[cam] = torch.from_numpy(trfm_i).type(torch.float32)
 
-    camera_matrices[cam] = camera_matrix(cam_idx)
-    camera_matrices_np[cam] = camera_matrix(cam_idx).cpu().detach().numpy()
+    camera_matrices[cam] = camera_matrix(cam_idx, parameters)
+    camera_matrices_np[cam] = camera_matrix(cam_idx, parameters).cpu().detach().numpy()
     distortion_coefficients[cam] = get_distortion_coefficients(cam_idx, parameters.fisheye[cam_idx]).to('cpu')
     if parameters.fisheye[cam_idx]:
         distortion_coefficients_np[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.kd2[cam_idx], parameters.kd3[cam_idx]])

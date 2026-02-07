@@ -19,8 +19,6 @@ sys.path.append('../utils')
 from pose_estimator_utils import camera_matrix, triangulate
 from skeleton_matching_utils import get_person_proposal_from_network_output
 
-sys.path.append('../')
-from parameters import parameters 
 
 parser = argparse.ArgumentParser(description='Print accuracy and time metrics of the skeleton-matching model combined with triangulation (CMU Panoptic only)')
 
@@ -30,6 +28,12 @@ parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default=
 parser.add_argument('--datastep', type=int, nargs='?', required=False, default=12, help='Data step used to compute the metrics')
 
 args = parser.parse_args()
+
+sys.path.append('../')
+# from parameters import parameters 
+from parameters import generate_tracker_parameters_from_file
+parameters = generate_tracker_parameters_from_file(args.config)
+
 
 TEST_FILES = args.testfiles
 
@@ -62,7 +66,7 @@ image_size = (parameters.image_width, parameters.image_height)
 for cam_idx, cam in enumerate(parameters.camera_names):
     # Add the direct transform (root to camera) to the list
     trfm =   tm.get_transform("root", parameters.camera_names[cam_idx])
-    cam_matrix[cam] = camera_matrix(cam_idx).cpu().detach().numpy()
+    cam_matrix[cam] = camera_matrix(cam_idx, parameters).cpu().detach().numpy()
 
     # Add the inverse transform (camera to root) to the list
     camera_i_transforms.append(torch.from_numpy(tm.get_transform(parameters.camera_names[cam_idx], "root")).type(torch.float32))

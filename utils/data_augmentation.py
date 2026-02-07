@@ -3,9 +3,9 @@ import numpy as np
 import itertools
 
 
-import sys
-sys.path.append('../')
-from parameters import parameters 
+# import sys
+# sys.path.append('../')
+# from parameters import parameters 
 
 import copy
 import json
@@ -47,7 +47,7 @@ def permutations_generator_random(available, data_augmentation, max_combinations
         yield combination
 
 
-def add_data_to_json(json_data, min_number_of_views = 1):
+def add_data_to_json(json_data, parameters, min_number_of_views = 1):
     new_json_data = []
     json_index = 0
 

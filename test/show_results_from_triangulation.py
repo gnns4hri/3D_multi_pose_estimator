@@ -10,13 +10,11 @@ sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
 from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
 
-sys.path.append('../')
-from parameters import parameters 
 
 sys.path.append('../utils')
 from pose_estimator_utils import camera_matrix, triangulate
 from skeleton_matching_utils import get_person_proposal_from_network_output
-
+from pose_estimator_dataset_from_json import build_support_data
 
 parser = argparse.ArgumentParser(description='Display 3D multi-pose results using triangulation')
 
@@ -26,8 +24,17 @@ parser.add_argument('--tmfile', type=str, nargs=1, help='Transformation matrix f
 parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
 parser.add_argument('--plotperiod', type=int, nargs='?', required=False, default=0, help='Plot period (miliseconds)')
 parser.add_argument('--datastep', type=int, nargs='?', required=False, default=10, help='Data step used to plot the results')
-
+parser.add_argument('--config', type=str, required=True, help='YAML config file')
 args = parser.parse_args()
+
+sys.path.append('../')
+# from parameters import parameters 
+from parameters import generate_tracker_parameters_from_file
+parameters = generate_tracker_parameters_from_file(args.config)
+
+
+parameters = build_support_data(parameters)
+
 
 if args.showgt and args.tmfile is None:
     parser.error("--showgt requires --tmfile")
@@ -59,7 +66,7 @@ image_size = (parameters.image_width, parameters.image_height)
 for cam_idx, cam in enumerate(parameters.camera_names):
     # Add the direct transform (root to camera) to the list
     trfm =   tm.get_transform("root", cam)
-    cam_matrix[cam] = camera_matrix(cam_idx).cpu().detach().numpy()
+    cam_matrix[cam] = camera_matrix(cam_idx, parameters).cpu().detach().numpy()
     if parameters.fisheye[cam_idx]:
         distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.kd2[cam_idx], parameters.kd3[cam_idx]])
     else:

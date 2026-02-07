@@ -16,14 +16,19 @@ sys.path.append('../utils')
 from skeleton_matching_utils import get_person_proposal_from_network_output
 
 
-sys.path.append('../')
-from parameters import parameters 
 
 parser = argparse.ArgumentParser(description='Print metrics of the skeleton-matching model (ground truth is not required)')
 
 parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='List of json files used as input (each file contains data of a single individual)')
 parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
 parser.add_argument('--datastep', type=int, nargs='?', required=False, default=12, help='Data step used to compute the metrics')
+parser.add_argument('--config', type=str, required=True, help='YAML config file')
+args = parser.parse_args()
+
+sys.path.append('../')
+# from parameters import parameters 
+from parameters import generate_tracker_parameters_from_file
+parameters = generate_tracker_parameters_from_file(args.config)
 
 
 args = parser.parse_args()

@@ -1,15 +1,13 @@
 import networkx as nx
 import sys
 
-sys.path.append('../')
-from parameters import parameters 
 
 from collections import namedtuple
 from operator import itemgetter
 Matching = namedtuple('Matching', 'id nodes score')
 
 
-def get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, jsons_for_head=None, CLASSIFICATION_THRESHOLD=0.5):
+def get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, parameters, jsons_for_head=None, CLASSIFICATION_THRESHOLD=0.5):
     #
     #
     # Process the output graph as it comes from the GNN

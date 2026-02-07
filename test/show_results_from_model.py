@@ -8,15 +8,8 @@ import argparse
 
 sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
-from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
+from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView, get_working_temp_data
 
-sys.path.append('../')
-from parameters import parameters 
-
-sys.path.append('../utils')
-from pose_estimator_dataset_from_json import PoseEstimatorDataset
-from mlp import PoseEstimatorMLP
-from skeleton_matching_utils import get_person_proposal_from_network_output
 
 parser = argparse.ArgumentParser(description='Display 3D multi-pose results using the 3D pose estimation model')
 
@@ -26,8 +19,25 @@ parser.add_argument('--tmfile', type=str, nargs=1, help='Directory that contains
 parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
 parser.add_argument('--plotperiod', type=int, nargs='?', required=False, default=0, help='Plot period (miliseconds)')
 parser.add_argument('--datastep', type=int, nargs='?', required=False, default=10, help='Data step used to plot the results')
-
+parser.add_argument('--config', type=str, required=True, help='YAML config file')
 args = parser.parse_args()
+
+
+sys.path.append('../')
+from parameters import generate_tracker_parameters_from_file
+parameters = generate_tracker_parameters_from_file(args.config)
+from pose_estimator_dataset_from_json import build_support_data
+parameters = build_support_data(parameters)
+get_working_temp_data(parameters)
+
+
+
+
+sys.path.append('../utils')
+from pose_estimator_dataset_from_json import PoseEstimatorDataset
+from mlp import PoseEstimatorMLP
+from skeleton_matching_utils import get_person_proposal_from_network_output
+
 
 if args.showgt and args.tmfile is None:
     parser.error("--showgt requires --tmfile")
@@ -142,6 +152,7 @@ class Visualizer(object):
 
 
     def process_data(self):
+        global parameters
         self.itert += 1
         if self.itert >= len(self.input_data):
             exit()
@@ -163,7 +174,7 @@ class Visualizer(object):
                     processed_input[cam].append(input_element[cam][1])
 
             
-            scenario = MergedMultipleHumansDataset(processed_input, mode='test', limit=10000, debug=True, alt=parameters.graph_alternative, verbose=False)
+            scenario = MergedMultipleHumansDataset(processed_input, parameters, mode='test', limit=10000, debug=True, alt=parameters.graph_alternative, verbose=False)
 
             if len(scenario.graphs)==0:
                 print('empty scenario')
@@ -182,7 +193,7 @@ class Visualizer(object):
             indices = torch.squeeze(indices).to('cpu')#.to(device)
 
             # Process the output graph as it comes from the GNN
-            final_output = get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, scenario.jsons_for_head, CLASSIFICATION_THRESHOLD)
+            final_output = get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, parameters, scenario.jsons_for_head, CLASSIFICATION_THRESHOLD)
         else:
             cam = parameters.used_cameras[0]
             joints_json = input_element[cam][0]
