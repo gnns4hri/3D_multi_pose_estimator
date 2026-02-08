@@ -26,6 +26,7 @@ parser.add_argument('--testfiles', type=str, nargs='+', required=True, help='Lis
 parser.add_argument('--tmdir', type=str, nargs=1,required=True, help='Directory that contains the files with the transfomation matrices')
 parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
 parser.add_argument('--datastep', type=int, nargs='?', required=False, default=12, help='Data step used to compute the metrics')
+parser.add_argument('--config', type=str, required=True, help='Parameters configuration file')
 
 args = parser.parse_args()
 
