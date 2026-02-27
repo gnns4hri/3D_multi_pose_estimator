@@ -40,10 +40,10 @@ def build_support_data(parameters):
     for cam_iList, cam_idx in enumerate(parameters.cameras):
         cam = parameters.camera_names[cam_iList]
         # Add the direct transform (root to camera) to the list
-        trfm = temp.tm.get_transform("root", cam)
+        trfm = temp.tm.get_transform(parameters.root, cam)
         temp.camera_d_transforms.append(torch.from_numpy(trfm).type(torch.float32))
         # Add the inverse transform (camera to root) to the list
-        temp.camera_i_transforms.append(torch.from_numpy(temp.tm.get_transform(cam, "root")).type(torch.float32))
+        temp.camera_i_transforms.append(torch.from_numpy(temp.tm.get_transform(cam, parameters.root)).type(torch.float32))
         # Add the camera matrix to the list
         temp.camera_matrices[cam] = camera_matrix(cam_idx, parameters, use_cuda=False).cpu().detach().numpy()
         if parameters.fisheye[cam_idx]:
@@ -138,6 +138,7 @@ class PoseEstimatorDataset(Dataset):
         self.numbers_per_joint_for_loss = numbers_per_joint_for_loss
 
         # fisheye = parameters.fisheye
+        parameters = build_support_data(parameters)
 
         camera_section_length_total = len(parameters.joint_list)*numbers_per_joint_for_loss  # L joints/skeleton, X numbers/joint.
         camera_section_length_input = len(parameters.joint_list)*numbers_per_joint  # L joints/skeleton, X numbers/joint.
@@ -203,7 +204,7 @@ class PoseEstimatorDataset(Dataset):
                             used_c_index = parameters.used_cameras.index(c)
                             used_c_offset = used_c_index * camera_section_length_input
 
-                            cam_from_root = torch.matmul(camera_i_transforms[c_index], torch.tensor([0.0, 0.0, 0.0, 1.0]))  # world to camera transformation matrix, results_3d)
+                            cam_from_root = torch.matmul(parameters.temp.camera_i_transforms[c_index], torch.tensor([0.0, 0.0, 0.0, 1.0]))  # world to camera transformation matrix, results_3d)
                             for j, values in skeleton.items():
                                 if j == "ID":
                                     continue
@@ -218,13 +219,13 @@ class PoseEstimatorDataset(Dataset):
                                 network_input[used_c_offset + used_j_offset + 3] = values[4]
 
                                 point = np.array([values[1], values[2]])
-                                if fisheye[c]:
+                                if parameters.temp.fisheye[c]:
                                     reshaped_point = np.asarray(point, dtype=np.float64).reshape(-1, 1, 2)
-                                    undistorted_point = cv2.fisheye.undistortPoints(reshaped_point, camera_matrices[c], distortion_coefficients[c])
+                                    undistorted_point = cv2.fisheye.undistortPoints(reshaped_point, parameters.temp.camera_matrices[c], parameters.temp.distortion_coefficients[c])
                                 else:
-                                    undistorted_point = cv2.undistortPoints(point, camera_matrices[c], distortion_coefficients[c])
+                                    undistorted_point = cv2.undistortPoints(point, parameters.temp.camera_matrices[c], parameters.temp.distortion_coefficients[c])
                                 undistorted_pix_ray = torch.from_numpy(undistorted_point[0][0]).type(torch.float32)
-                                pix_ray_from_root = torch.matmul(camera_i_transforms[c_index], torch.cat((undistorted_pix_ray, torch.tensor([1.0, 0.0])))) #perform only rotation
+                                pix_ray_from_root = torch.matmul(parameters.temp.camera_i_transforms[c_index], torch.cat((undistorted_pix_ray, torch.tensor([1.0, 0.0])))) #perform only rotation
                                 network_input[used_c_offset + used_j_offset + 4: used_c_offset + used_j_offset + 7] = cam_from_root[0:3] / 10.
                                 network_input[used_c_offset + used_j_offset + 7: used_c_offset + used_j_offset + 10] = pix_ray_from_root[0:3] / 10.
 

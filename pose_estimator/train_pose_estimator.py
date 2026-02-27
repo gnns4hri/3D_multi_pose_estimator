@@ -149,8 +149,8 @@ if __name__ == '__main__':
 
     for cam_idx, cam in enumerate(parameters.cameras):
         # Add the direct transform (root to camera) to the list
-        trfm =   tm.get_transform("root", parameters.camera_names[cam_idx])
-        trfm_i = tm.get_transform(parameters.camera_names[cam_idx], "root")
+        trfm =   tm.get_transform(parameters.root, parameters.camera_names[cam_idx])
+        trfm_i = tm.get_transform(parameters.camera_names[cam_idx], parameters.root)
         camera_d_transforms.append(
                 Variable(torch.from_numpy(trfm).type(torch.float32).to(device), requires_grad=optimise_matrices))
         # Add the inverse transform (camera to root) to the list

@@ -44,13 +44,14 @@ fields = (
     'format',
     'graph_alternative',
     'axes_3D',
+    'root',
     'temp'
 )
 
 TrackerParameters = namedtuple('TrackerParameters', fields, defaults=(None,) * len(fields))
 
 CONFIGURATION = 'PANOPTIC' # values = {PANOPTIC, ARPLAB}
-CONFIGURATION = '../casa/gym.yaml'
+CONFIGURATION = '../ring/ring.yaml'
 
 def generate_tracker_parameters_from_file(config_path):
     with open(config_path, "r") as f:
@@ -81,6 +82,7 @@ def generate_tracker_parameters_from_file(config_path):
         min_number_of_views = data["min_number_of_views"],
         format = data["format"],
         graph_alternative = data["graph_alternative"],
+        root = data["root"],
         axes_3D = { key: tuple(value) for key, value in data["axes_3D"].items() }
     )
 
@@ -171,5 +173,4 @@ else:
 #
 #  ASSERTS
 #
-assert len(parameters.cameras) == len(
-    parameters.camera_names), "The number of cameras must be equal in 'cameras' and 'camera_names'"
+assert len(parameters.cameras) == len(parameters.camera_names), "The number of cameras must be equal in 'cameras' and 'camera_names'"
