@@ -48,10 +48,10 @@ def get_working_temp_data(parameters):
         if parameters.camera_names[cam_idx] in parameters.used_cameras_skeleton_matching:
             # Add the direct transform (root to camera) to the list
             ret.camera_d_transforms.append(
-                torch.from_numpy(ret.tm.get_transform("root", parameters.camera_names[cam_idx])).type(torch.float32))
+                torch.from_numpy(ret.tm.get_transform(parameters.root, parameters.camera_names[cam_idx])).type(torch.float32))
             # Add the inverse transform (camera to root) to the list
             ret.camera_i_transforms.append(
-                torch.from_numpy(ret.tm.get_transform(parameters.camera_names[cam_idx], "root")).type(torch.float32))
+                torch.from_numpy(ret.tm.get_transform(parameters.camera_names[cam_idx], parameters.root)).type(torch.float32))
             # Add the camera matrix to the list
             ret.camera_matrices.append(camera_matrix(cam, parameters))
             # Add the inverse camera matrix to the list
@@ -741,12 +741,12 @@ class MergedMultipleHumansDataset(DGLDataset):
             for sample_view in multi_person:  # FOR EACH PERSON IN THE (PLUS SPURIOUS)
                 person_heads = []
                 # In the next line, `sample_view` would be a _natural_ sample
-                view_graph, view_heads, view_num_joints, n_nodes, cur_nodes_camera = self.load_people_view_graph(sample_view, parameters)
+                view_graph, view_heads, view_num_joints, n_nodes, cur_nodes_camera = self.load_people_view_graph(sample_view, self.parameters)
 
                 nodes_camera += cur_nodes_camera
 
                 for cam_idx in sample_view:  
-                    if cam_idx in parameters.used_cameras_skeleton_matching:
+                    if cam_idx in self.parameters.used_cameras_skeleton_matching:
                         heads_cam = view_heads[cam_idx]
                         joints_cam = view_num_joints[cam_idx]
                         if len(joints_cam) > 0:

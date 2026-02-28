@@ -73,7 +73,7 @@ def compute_error(parameters, joints, raw_inputs, orig_inputs, outputs, batch_si
     error2D = torch.zeros(batch_size, device=device)  # we'll add up the 2D error for the batch in this variable
 
     for joint_idx in range(len(joints)):
-        results_3d = torch.cat((torch.transpose(outputs[:, joint_idx * 3:joint_idx * 3 + 3]*10., 0, 1).to(device), ones),
+        results_3d = torch.cat((torch.transpose(outputs[:, joint_idx * 3:joint_idx * 3 + 3]/10., 0, 1).to(device), ones),
                                0).to(device)
         # For every camera
         for cam_idx, camera in enumerate(parameters.cameras):
