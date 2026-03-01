@@ -34,6 +34,10 @@ sys.path.append('../')
 # from parameters import parameters 
 from parameters import generate_tracker_parameters_from_file
 parameters = generate_tracker_parameters_from_file(args.config)
+from pose_estimator_dataset_from_json import build_support_data
+parameters = build_support_data(parameters)
+get_working_temp_data(parameters)
+
 
 
 TEST_FILES = args.testfiles

@@ -56,7 +56,7 @@ alpha = 0.15
 in_drop = 0.
 attn_drop = 0.
 residual = False
-limit = 120000
+limit = 40000
 hid_activation = torch.nn.LeakyReLU()
 
 alt = '3'

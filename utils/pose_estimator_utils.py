@@ -74,16 +74,16 @@ def triangulate(points_2D, camera_matrices, distortion_coefficients, projection_
             for comb in cam_combinations:
                 cam1 = list(points_2D[idx].keys())[comb[0]]
                 cam2 = list(points_2D[idx].keys())[comb[1]]
-                point1 = np.array(points_2D[idx][cam1])
+                point1 = np.array([[points_2D[idx][cam1]]])
                 if fisheye[cam1]:
-                    new_point1 = cv2.fisheye.undistortPoints(np.array([point1]), camera_matrices[cam1], distortion_coefficients[cam1])
+                    new_point1 = cv2.fisheye.undistortPoints(point1, camera_matrices[cam1], distortion_coefficients[cam1])
                 else:
-                    new_point1 = cv2.undistortPoints(np.array([point1]), camera_matrices[cam1], distortion_coefficients[cam1])
-                point2 = np.array(points_2D[idx][cam2])                                    
+                    new_point1 = cv2.undistortPoints(point1, camera_matrices[cam1], distortion_coefficients[cam1])
+                point2 = np.array([[points_2D[idx][cam2]]])
                 if fisheye[cam2]:
-                    new_point2 = cv2.fisheye.undistortPoints(np.array([point2]), camera_matrices[cam2], distortion_coefficients[cam2])
+                    new_point2 = cv2.fisheye.undistortPoints(point2, camera_matrices[cam2], distortion_coefficients[cam2])
                 else:
-                    new_point2 = cv2.undistortPoints(np.array([point2]), camera_matrices[cam2], distortion_coefficients[cam2])
+                    new_point2 = cv2.undistortPoints(point2, camera_matrices[cam2], distortion_coefficients[cam2])
                 point3d = cv2.triangulatePoints(projection_matrices[cam1], projection_matrices[cam2], new_point1, new_point2)
                 point3d = point3d[0:3]/point3d[3]
                 point3d_list.append(point3d)

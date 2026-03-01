@@ -43,6 +43,7 @@ def get_working_temp_data(parameters):
     ret.inverse_camera_matrices = []
     ret.distortion_coefficients = []
     ret.fisheye = []
+    ret.min_number_of_views = parameters.min_number_of_views
     ret.all_cameras_from_root = []
     for cam_idx, cam in enumerate(parameters.cameras):
         if parameters.camera_names[cam_idx] in parameters.used_cameras_skeleton_matching:
@@ -64,7 +65,6 @@ def get_working_temp_data(parameters):
     ret.CAMH = parameters.image_height
     ret.USING_3D = False
     ret.USING_WORLD_COORDINATES = False
-
 
     ############### CREATE NODES, RELATIONS AND FEATURES TYPES FOR ALL THE ALTERNATIVES ###################
 

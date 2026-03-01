@@ -8,7 +8,7 @@ import argparse
 
 sys.path.append('../skeleton_matching')
 from gat2 import GAT2 as GAT
-from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView
+from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView, get_working_temp_data
 
 
 sys.path.append('../utils')
@@ -27,13 +27,15 @@ parser.add_argument('--datastep', type=int, nargs='?', required=False, default=1
 parser.add_argument('--config', type=str, required=True, help='YAML config file')
 args = parser.parse_args()
 
+
 sys.path.append('../')
 # from parameters import parameters 
 from parameters import generate_tracker_parameters_from_file
 parameters = generate_tracker_parameters_from_file(args.config)
-
-
+from pose_estimator_dataset_from_json import build_support_data
 parameters = build_support_data(parameters)
+get_working_temp_data(parameters)
+
 
 
 if args.showgt and args.tmfile is None:
@@ -65,7 +67,7 @@ fisheye = {}
 image_size = (parameters.image_width, parameters.image_height)
 for cam_idx, cam in enumerate(parameters.camera_names):
     # Add the direct transform (root to camera) to the list
-    trfm =   tm.get_transform("root", cam)
+    trfm =   tm.get_transform(parameters.root, cam)
     cam_matrix[cam] = camera_matrix(cam_idx, parameters).cpu().detach().numpy()
     if parameters.fisheye[cam_idx]:
         distortion_coefficients[cam] = np.array([parameters.kd0[cam_idx], parameters.kd1[cam_idx], parameters.kd2[cam_idx], parameters.kd3[cam_idx]])
@@ -82,9 +84,9 @@ if SHOW_GT:
     tm_dataset = pickle.load(open(args.tmfile[0], 'rb'))
     dataset_camera_d_transforms = []
     for cam_idx, cam in enumerate(parameters.camera_names):
-        trfm_model = tm.get_transform(parameters.camera_names[cam_idx], "root")
+        trfm_model = tm.get_transform(parameters.camera_names[cam_idx], parameters.root)
         camera_i_transforms.append(torch.from_numpy(trfm_model).type(torch.float32))
-        trfm_dataset = tm_dataset.get_transform("root", parameters.camera_names[cam_idx])
+        trfm_dataset = tm_dataset.get_transform(parameters.root, parameters.camera_names[cam_idx])
         dataset_camera_d_transforms.append(torch.from_numpy(trfm_dataset).type(torch.float32))
 
 
@@ -174,8 +176,7 @@ class Visualizer(object):
                 processed_input[cam].append(json.dumps(cam_data))
                 processed_input[cam].append(input_element[cam][1])
 
-        
-        scenario = MergedMultipleHumansDataset(processed_input, mode='test', limit=10000, debug=True, alt=parameters.graph_alternative, verbose=False)
+        scenario = MergedMultipleHumansDataset(processed_input, parameters, mode='test', limit=10000, debug=True, alt=parameters.graph_alternative, verbose=False)
 
         if len(scenario.graphs)==0:
             print('empty scenario')
@@ -193,7 +194,7 @@ class Visualizer(object):
 
         indices = torch.squeeze(indices).to(device)
 
-        final_output = get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, scenario.jsons_for_head, CLASSIFICATION_THRESHOLD)
+        final_output = get_person_proposal_from_network_output(outputs, subgraph, indices, nodes_camera, parameters, scenario.jsons_for_head, CLASSIFICATION_THRESHOLD)
 
         lines = []
         points = []
@@ -296,7 +297,7 @@ class Visualizer(object):
                             print('error', pos[3])
 
 
-            result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices, fisheye, parameters.axes_3D['Y'][0]) 
+            result3D = triangulate(points_2D, cam_matrix, distortion_coefficients, projection_matrices, fisheye, parameters.axes_3D['Y'][0], parameters) 
             # print('3D',result3D)    
             # print('2D', points_2D)
 
