@@ -50,8 +50,9 @@ fields = (
 
 TrackerParameters = namedtuple('TrackerParameters', fields, defaults=(None,) * len(fields))
 
-CONFIGURATION = 'PANOPTIC' # values = {PANOPTIC, ARPLAB}
-CONFIGURATION = '../ring/ring.yaml'
+# CONFIGURATION = 'PANOPTIC' # values = {PANOPTIC, ARPLAB}
+# CONFIGURATION = '../ring/ring.yaml'
+CONFIGURATION = '../gym/gym.yaml'
 
 def generate_tracker_parameters_from_file(config_path):
     with open(config_path, "r") as f:

@@ -23,6 +23,7 @@ used_joints: [0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
 min_number_of_views: 2
 format: "COCO"
 graph_alternative: '3'
+root: 'root'
 axes_3D:
   'X': [+0, +1.]
   'Y': [+2, +1.]
