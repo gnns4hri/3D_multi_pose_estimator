@@ -297,7 +297,7 @@ class PoseEstimatorDataset(Dataset):
                     i_point = 0
                     for j, values in skeleton.items():
                         if j == "ID": continue
-                        j_offset = int(j) * numbers_per_joint
+                        j_offset = int(j) * parameters.numbers_per_joint
                         output[used_c_offset + j_offset] = values[3]
                         output[used_c_offset + j_offset + 1] = normalize_points[i_point][0] #(values[1] - image_width/2) / (image_width/2) 
                         output[used_c_offset + j_offset + 2] = normalize_points[i_point][1] #(values[2] - image_height/2) / (image_height/2)
@@ -310,7 +310,7 @@ class PoseEstimatorDataset(Dataset):
             for c_index in range(len(parameters.used_cameras)):  # Include 3D from triangulation
                 used_c_offset = c_index * camera_section_length_input
                 for j in results_3D:
-                    j_offset = int(j) * numbers_per_joint
+                    j_offset = int(j) * parameters.numbers_per_joint
                     output[used_c_offset + j_offset + 10] = 1. # 3D is available
                     output[used_c_offset + j_offset + 11: used_c_offset + j_offset + 14] = torch.tensor(np.transpose(results_3D[j])[0]) / 10.
 

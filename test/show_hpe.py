@@ -143,7 +143,7 @@ class Visualizer(object):
             return
         
         input_element = self.input_data[self.itert]
-        inputs = PoseEstimatorDataset(input_element, parameters.cameras, parameters.joint_list, parameters, save=False, parameters=parameters)
+        inputs = PoseEstimatorDataset(input_element, parameters.cameras, parameters.joint_list, parameters, save=False)
         inputs = inputs[0][0].reshape([1, inputs[0][0].size()[0]]).to(device)
 
         input_all = inputs #torch.tensor(inputs)
@@ -152,7 +152,7 @@ class Visualizer(object):
         result3D = torch.squeeze(output_all[0])*10.
         result3D = result3D.reshape((-1,3)).to('cpu')
         
-        print(result3D.shape)
+        # print(result3D.shape)
 
 
         number_of_joints = len(parameters.joint_list)
