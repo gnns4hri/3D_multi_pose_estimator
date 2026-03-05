@@ -105,7 +105,7 @@ def get_3D_from_triangulation(data, skeleton_indices, parameters):
                     new_point1 = cv2.undistortPoints(np.array([point1]), parameters.temp.camera_matrices[cam1], parameters.temp.distortion_coefficients[cam1])
                 point2 = np.array(points_2D[idx][cam2])
                 if parameters.temp.fisheye[cam2]:
-                    new_point2 = cv2.fisheye.undistortPoints(np.array(point1, dtype=np.float64).reshape(1, 1, 2), parameters.temp.camera_matrices[cam2], parameters.temp.distortion_coefficients[cam2])
+                    new_point2 = cv2.fisheye.undistortPoints(np.array(point2, dtype=np.float64).reshape(1, 1, 2), parameters.temp.camera_matrices[cam2], parameters.temp.distortion_coefficients[cam2])
                 else:
                     new_point2 = cv2.undistortPoints(np.array([point2]), parameters.temp.camera_matrices[cam2], parameters.temp.distortion_coefficients[cam2])
                 point3d = cv2.triangulatePoints(parameters.temp.projection_matrices[cam1], parameters.temp.projection_matrices[cam2], new_point1, new_point2)
