@@ -327,7 +327,7 @@ for file in TEST_FILES:
 
                 if not valid_input:
                     continue
-                inputs = PoseEstimatorDataset(raw_input, parameters.cameras, parameters.joint_list, save=False)
+                inputs = PoseEstimatorDataset(raw_input, parameters.cameras, parameters.joint_list, parameters, save=False)
                 inputs = inputs[0][0].reshape([1, inputs[0][0].size()[0]])
 
                 outputs = mlp(inputs)

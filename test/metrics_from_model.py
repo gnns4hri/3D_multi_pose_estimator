@@ -269,7 +269,7 @@ for file in TEST_FILES:
                                 visible_joints.append(j)
 
 
-                inputs = PoseEstimatorDataset(raw_input, parameters.cameras, parameters.joint_list, save=False, parameters=parameters)
+                inputs = PoseEstimatorDataset(raw_input, parameters.cameras, parameters.joint_list, parameters, save=False, parameters=parameters)
                 if inputs.__len__()==0:
                     continue
 

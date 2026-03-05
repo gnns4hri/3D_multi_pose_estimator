@@ -1,10 +1,10 @@
 import os
 import sys
 sys.path.append('../')
-from parameters import parameters 
-number_of_joints = len(parameters.joint_list)
-numbers_per_joint = parameters.numbers_per_joint
-numbers_per_joint_for_loss = parameters.numbers_per_joint_for_loss
+# from parameters import parameters 
+#number_of_joints = len(parameters.joint_list)
+#numbers_per_joint = parameters.numbers_per_joint
+#numbers_per_joint_for_loss = parameters.numbers_per_joint_for_loss
 
 
 import torch
@@ -69,7 +69,7 @@ def get_skeleton_indices(data):
         skeleton_indices[cam] = index
     return skeleton_indices
 
-def get_3D_from_triangulation(data, skeleton_indices, parameters=parameters):
+def get_3D_from_triangulation(data, skeleton_indices, parameters):
     points_2D = dict()
     for cam in data.keys():
         if cam in parameters.used_cameras:
@@ -99,6 +99,7 @@ def get_3D_from_triangulation(data, skeleton_indices, parameters=parameters):
                 cam2 = list(points_2D[idx].keys())[comb[1]]
                 point1 = np.array(points_2D[idx][cam1])
                 if parameters.temp.fisheye[cam1]:
+                    #print(f"{cam1=} {parameters.temp.fisheye[cam1]=}")
                     new_point1 = cv2.fisheye.undistortPoints(np.array(point1).reshape(1, 1, 2), parameters.temp.camera_matrices[cam1], parameters.temp.distortion_coefficients[cam1])
                 else:
                     new_point1 = cv2.undistortPoints(np.array([point1]), parameters.temp.camera_matrices[cam1], parameters.temp.distortion_coefficients[cam1])
@@ -118,11 +119,11 @@ def get_3D_from_triangulation(data, skeleton_indices, parameters=parameters):
 
 from data_augmentation import permutations_generator
 
-image_width = parameters.image_width
-image_height = parameters.image_height
+# image_width = parameters.image_width
+# image_height = parameters.image_height
 
 class PoseEstimatorDataset(Dataset):
-    def __init__(self, input_data, cameras, joint_list, transform=None, data_augmentation=False, reload=False, save=False, device=None, parameters=parameters):
+    def __init__(self, input_data, cameras, joint_list, parameters, transform=None, data_augmentation=False, reload=False, save=False, device=None):
         """
             input_data
                -> list[str]: List containing paths to the JSON files.
@@ -132,16 +133,20 @@ class PoseEstimatorDataset(Dataset):
             joint_list (list of integers): Joint identifiers to be extracted from the dataset.
                -> IGNORED IN THE CURRENT IMPLEMENTATION
         """
+
+        #number_of_joints = len(parameters.joint_list)
+        #numbers_per_joint = parameters.numbers_per_joint
+        #numbers_per_joint_for_loss = parameters.numbers_per_joint_for_loss
         self.transform = transform
         self.data_augmentation = data_augmentation
-        self.numbers_per_joint = numbers_per_joint
-        self.numbers_per_joint_for_loss = numbers_per_joint_for_loss
+        self.numbers_per_joint = parameters.numbers_per_joint
+        self.numbers_per_joint_for_loss = parameters.numbers_per_joint_for_loss
 
         # fisheye = parameters.fisheye
         parameters = build_support_data(parameters)
 
-        camera_section_length_total = len(parameters.joint_list)*numbers_per_joint_for_loss  # L joints/skeleton, X numbers/joint.
-        camera_section_length_input = len(parameters.joint_list)*numbers_per_joint  # L joints/skeleton, X numbers/joint.
+        camera_section_length_total = len(parameters.joint_list)*parameters.numbers_per_joint_for_loss  # L joints/skeleton, X numbers/joint.
+        camera_section_length_input = len(parameters.joint_list)*parameters.numbers_per_joint  # L joints/skeleton, X numbers/joint.
         skeleton_length_total = camera_section_length_total * len(parameters.cameras)
         skeleton_length_input = camera_section_length_input * len(parameters.used_cameras)
 
@@ -151,7 +156,7 @@ class PoseEstimatorDataset(Dataset):
         if reload is True:
             reload_fname = f'{input_data[-1]}.pytorch'
             if os.path.exists(reload_fname):
-                loaded = torch.load(reload_fname)
+                loaded = torch.load(reload_fname, weights_only=True)
                 self.data = loaded['data']
                 self.orig_data = loaded['orig_data']
                 return
@@ -194,7 +199,7 @@ class PoseEstimatorDataset(Dataset):
                         for j, values in skeleton.items():
                             if j == "ID":
                                 continue
-                            j_offset = int(j) * numbers_per_joint_for_loss
+                            j_offset = int(j) * parameters.numbers_per_joint_for_loss
                             error_input[c_offset + j_offset] = values[3]
                             error_input[c_offset + j_offset + 1] = values[1]
                             error_input[c_offset + j_offset + 2] = values[2]
@@ -212,10 +217,10 @@ class PoseEstimatorDataset(Dataset):
                                     continue
                                 flags[used_c_index] = 1
                                 view_from_robot = True
-                                used_j_offset = int(j) * numbers_per_joint
+                                used_j_offset = int(j) * parameters.numbers_per_joint
                                 network_input[used_c_offset + used_j_offset] = values[3]
-                                network_input[used_c_offset + used_j_offset + 1] = (values[1] - image_width/2) / (image_width/2)
-                                network_input[used_c_offset + used_j_offset + 2] = (values[2] - image_height/2) / (image_height/2)
+                                network_input[used_c_offset + used_j_offset + 1] = (values[1] - parameters.image_width/2) / (parameters.image_width/2)
+                                network_input[used_c_offset + used_j_offset + 2] = (values[2] - parameters.image_height/2) / (parameters.image_height/2)
                                 network_input[used_c_offset + used_j_offset + 3] = values[4]
 
                                 point = np.array([values[1], values[2]])
@@ -233,7 +238,7 @@ class PoseEstimatorDataset(Dataset):
                         for c_index in range(len(parameters.used_cameras)):  # Include 3D from triangulation
                             used_c_offset = c_index * camera_section_length_input
                             for j in results_3D:
-                                used_j_offset = int(j) * numbers_per_joint
+                                used_j_offset = int(j) * parameters.numbers_per_joint
                                 network_input[used_c_offset + used_j_offset + 10] = 1. # 3D is available
                                 network_input[used_c_offset + used_j_offset + 11: used_c_offset + used_j_offset + 14] = torch.tensor(np.transpose(results_3D[j])[0]) / 10.
 
@@ -243,7 +248,7 @@ class PoseEstimatorDataset(Dataset):
                                 c_offset = c_index * camera_section_length_input
                                 if part == 0:
                                     for j in parameters.joint_list:
-                                        j_offset = int(j) * numbers_per_joint
+                                        j_offset = int(j) * parameters.numbers_per_joint
                                         network_input_DA[c_offset + j_offset: c_offset + j_offset + 10] = 0.
                             total += 1
                             self.data.append(network_input_DA)
@@ -277,7 +282,7 @@ class PoseEstimatorDataset(Dataset):
                         point_list.append([values[1], values[2]])
                     if point_list:
                         point_list = np.array(point_list)
-                        norm_factors = np.array([[image_width/2, image_height/2]]*point_list.shape[0])
+                        norm_factors = np.array([[parameters.image_width/2, parameters.image_height/2]]*point_list.shape[0])
                         normalize_points = (point_list-norm_factors)/norm_factors                    
                         if parameters.temp.fisheye[c]:
                             reshaped_point_list = np.asarray(point_list, dtype=np.float64).reshape(-1, 1, 2)

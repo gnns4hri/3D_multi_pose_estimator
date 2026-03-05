@@ -306,7 +306,7 @@ class Visualizer(object):
             if not raw_input:
                 continue
 
-            inputs = PoseEstimatorDataset(raw_input, parameters.cameras, parameters.joint_list, save=False, parameters=parameters)
+            inputs = PoseEstimatorDataset(raw_input, parameters.cameras, parameters.joint_list, parameters, save=False, parameters=parameters)
             inputs = inputs[0][0].reshape([1, inputs[0][0].size()[0]]).to(device)
             batched_input.append(inputs)       
 

@@ -539,10 +539,11 @@ class MergedMultipleHumansDataset(DGLDataset):
 
     def __init__(self, paths, parameters, probabilities=[1.], limit='100000000', alt=None, mode='train', force_reload=False,
                  verbose=True,
-                 debug=False, raw_dir='.'):
+                 debug=False, raw_dir='.', generate_cache=False):
         if alt is None:
             print('Alt is None')
             sys.exit(-1)
+        self.generate_cache = generate_cache
         self.inputs = []
         self.inputs_indices = []
         self.parameters = parameters

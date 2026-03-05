@@ -147,6 +147,7 @@ if __name__ == '__main__':
     distortion_coefficients = []
     fisheye = []
 
+    print(f"{parameters.cameras=}")
     for cam_idx, cam in enumerate(parameters.cameras):
         # Add the direct transform (root to camera) to the list
         trfm =   tm.get_transform(parameters.root, parameters.camera_names[cam_idx])
@@ -163,6 +164,7 @@ if __name__ == '__main__':
     # Instantiate the MLP
     in_dimensions = number_of_cameras*len(joint_list)*numbers_per_joint
     print(f'in_dim  {in_dimensions}')
+    print(f"out_dim {len(joint_list)*3}")
     mlp = PoseEstimatorMLP(input_dimensions=in_dimensions, output_dimensions=len(joint_list)*3).to(device)
 
     # Load the dataset.
@@ -171,8 +173,9 @@ if __name__ == '__main__':
         data_device = 'cpu'
     else:
         data_device = device
-    train_dataset = PoseEstimatorDataset(TRAIN_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=True)
-    valid_dataset = PoseEstimatorDataset(DEV_FILES, parameters.cameras, joint_list, data_augmentation=True, reload=True, save=True)
+
+    train_dataset = PoseEstimatorDataset(TRAIN_FILES, parameters.cameras, joint_list, parameters, data_augmentation=True, reload=True, save=False)
+    valid_dataset = PoseEstimatorDataset(DEV_FILES, parameters.cameras, joint_list, parameters, data_augmentation=True, reload=True, save=False)
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     valid_dataloader = torch.utils.data.DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
     print(f'dataset length: {len(train_dataset)}')
