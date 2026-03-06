@@ -7,8 +7,8 @@ import numpy as np
 import argparse
 
 sys.path.append('../skeleton_matching')
-from gat2 import GAT2 as GAT
-from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView, get_working_temp_data
+#from gat2 import GAT2 as GAT
+#from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView, get_working_temp_data
 
 
 sys.path.append('../utils')
@@ -31,13 +31,13 @@ from parameters import generate_tracker_parameters_from_file
 parameters = generate_tracker_parameters_from_file(args.config)
 from pose_estimator_dataset_from_json import build_support_data
 parameters = build_support_data(parameters)
-get_working_temp_data(parameters)
+#get_working_temp_data(parameters)
 
 
 TEST_FILE = args.testfile
 
 
-num_features = len(HumanGraphFromView.get_all_features())
+#num_features = len(HumanGraphFromView.get_all_features())
 
 if torch.cuda.is_available() is True:
     device = torch.device('cuda')
