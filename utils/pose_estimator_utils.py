@@ -91,6 +91,6 @@ def triangulate(points_2D, camera_matrices, distortion_coefficients, projection_
             dist_to_0 = point3d_list[:,median_chek_axis]
             median = np.sort(dist_to_0, axis=0)[dist_to_0.shape[0]//2]
             dist_to_median = np.linalg.norm(dist_to_0-median, axis=1)
-            new_point3d_list = [point3d_list[i,:] for i in range(dist_to_median.shape[0]) if dist_to_median[i] < 0.05]
+            new_point3d_list = [point3d_list[i,:] for i in range(dist_to_median.shape[0]) if dist_to_median[i] < 0.005]
             result3D[idx] = np.mean(np.array(new_point3d_list), axis=0)
     return result3D
