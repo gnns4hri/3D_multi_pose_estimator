@@ -7,7 +7,6 @@ class PoseEstimatorMLP(nn.Module):
         negative_slope = 0.1
         self.layers = nn.Sequential(
             nn.Flatten(),
-
             nn.Linear(input_dimensions, 3072),
             nn.LeakyReLU(negative_slope=negative_slope),
             nn.Linear(3072, 3072),

@@ -2,7 +2,7 @@ import time
 
 epochs = 10000
 lr = 1e-4
-batch_size = 128
+batch_size = 2096
 patience = 20
 optimise_matrices = False
 
@@ -24,7 +24,7 @@ from torch.utils import data
 sys.path.append('../utils')
 from pose_estimator_utils import camera_matrix, get_distortion_coefficients, from_homogeneous, from_homogeneous2, apply_distortion, apply_fisheye_distortion
 from pose_estimator_dataset_from_json import PoseEstimatorDataset
-from mlp import PoseEstimatorMLP
+from mlp2 import PoseEstimatorMLP
 
 from pytransform3d import rotations as pr
 from pytransform3d import transformations as pt
@@ -62,6 +62,17 @@ print(f'Using {DEV_FILES} for dev')
 # sys.path.append('../')
 from parameters import generate_tracker_parameters_from_file
 parameters = generate_tracker_parameters_from_file(CONFIG)
+
+
+
+
+#torch.autograd.set_detect_anomaly(True)
+def check_tensor(name, tensor):
+    if torch.isnan(tensor).any():
+        print(f"{name} has NaN")
+    if torch.isinf(tensor).any():
+        print(f"{name} has Inf")
+
 
 
 joint_list = parameters.joint_list
@@ -166,7 +177,7 @@ if __name__ == '__main__':
     in_dimensions = number_of_cameras*len(joint_list)*numbers_per_joint
     print(f'in_dim  {in_dimensions}')
     print(f"out_dim {len(joint_list)*3}")
-    mlp = PoseEstimatorMLP(input_dimensions=in_dimensions, output_dimensions=len(joint_list)*3).to(device)
+    mlp = PoseEstimatorMLP(input_dimensions=in_dimensions, output_dimensions=len(joint_list)*3, splits=number_of_cameras).to(device)
 
     # Load the dataset.
     print("Loading datasets")
@@ -213,7 +224,9 @@ if __name__ == '__main__':
         # Iterate over the DataLoader for training data
         for mini_batch, data_inputs in enumerate(train_dataloader, 0):
             raw_inputs = data_inputs[0].to(device)
+            #check_tensor("raw", raw_inputs)
             orig_inputs = data_inputs[1].to(device)
+            #check_tensor("orig", orig_inputs)
             # Zero the gradients
             optimizer.zero_grad()
             # Set auxiliary variables
@@ -223,16 +236,19 @@ if __name__ == '__main__':
             # Compute output (forward pass)
             #
             outputs = mlp(raw_inputs.to(device))
+            #check_tensor("outputs", outputs)
 
             #
             # Compute back projections and add up the error
             #
             error = compute_error(parameters, joint_list, raw_inputs, orig_inputs, outputs, this_batch_size,
                                     camera_d_transforms, camera_matrices, distortion_coefficients, fisheye)
+            #check_tensor("error", error)
 
             # Compute loss
             target = torch.zeros(error.size(), device=device)  # We aim for zero error
             loss = loss_function(error, target)
+            #check_tensor("loss", loss)
 
             # Perform backward pass
             loss.backward()

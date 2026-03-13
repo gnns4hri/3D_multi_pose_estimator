@@ -6,21 +6,23 @@ import copy
 import numpy as np
 import argparse
 
-sys.path.append('../skeleton_matching')
-#from gat2 import GAT2 as GAT
+#sys.path.append('../skeleton_matching')
 #from graph_generator import MergedMultipleHumansDataset, HumanGraphFromView, get_working_temp_data
 
 
 sys.path.append('../utils')
 from pose_estimator_utils import camera_matrix, triangulate
 from skeleton_matching_utils import get_person_proposal_from_network_output
-from pose_estimator_dataset_from_json import build_support_data
+from pose_estimator_dataset_from_json import build_support_data, PoseEstimatorDataset
+
+from mlp2 import PoseEstimatorMLP
 
 parser = argparse.ArgumentParser(description='Display 3D multi-pose results using triangulation')
 
 parser.add_argument('--testfile', type=str, nargs=1, required=True, help='Test file used as input')
-parser.add_argument('--plotperiod', type=int, nargs='?', required=False, default=10, help='Plot period (miliseconds)')
-parser.add_argument('--datastep', type=int, nargs='?', required=False, default=1, help='Data step used to plot the results')
+parser.add_argument('--modelsdir', type=str, nargs='?', required=False, default='../models/', help='Directory that contains the models\' files')
+parser.add_argument('--plotperiod', type=int, nargs='?', required=False, default=0, help='Plot period (miliseconds)')
+parser.add_argument('--datastep', type=int, nargs='?', required=False, default=10, help='Data step used to plot the results')
 parser.add_argument('--config', type=str, required=True, help='YAML config file')
 args = parser.parse_args()
 
@@ -36,8 +38,11 @@ parameters = build_support_data(parameters)
 
 TEST_FILE = args.testfile
 
+MODELSDIR = args.modelsdir
+
 
 #num_features = len(HumanGraphFromView.get_all_features())
+
 
 if torch.cuda.is_available() is True:
     device = torch.device('cuda')
@@ -67,7 +72,7 @@ for cam_idx, cam in enumerate(parameters.camera_names):
     projection_matrices[cam] = projection
 
 
-with open("../checkerboard.json", 'r') as f:
+with open("../human_pose.json", 'r') as f:
     human_pose = json.load(f)
     skeleton = human_pose["skeleton"]
     keypoints = human_pose["keypoints"]
@@ -121,6 +126,13 @@ class Visualizer(object):
             self.input_data += json.load(open(json_file, 'rb'))
         self.itert = 0
 
+        numbers_per_joint = parameters.numbers_per_joint
+        self.mlp = PoseEstimatorMLP(input_dimensions=len(parameters.cameras)*len(parameters.joint_list)*numbers_per_joint, output_dimensions=3*len(parameters.joint_list), splits=len(parameters.cameras))
+        saved = torch.load(MODELSDIR + 'pose_estimator.pytorch', map_location=device)
+        self.mlp.load_state_dict(saved['model_state_dict'])
+        self.mlp = self.mlp.to(device)
+
+
 
     def process_data(self):
         self.itert += 1
@@ -129,23 +141,19 @@ class Visualizer(object):
 
         if self.itert%DATASTEP!=0:
             return
+        
         input_element = self.input_data[self.itert]
+        inputs = PoseEstimatorDataset(input_element, parameters.cameras, parameters.joint_list, parameters, save=False)
+        inputs = inputs[0][0].reshape([1, inputs[0][0].size()[0]]).to(device)
 
-        joints_data = dict()
-        for cam in input_element:
-            # print('INPUT', input_element[cam][0])
-            all_cam_data = json.loads(input_element[cam][0])
-            # print('CAM DATA', all_cam_data)
-            if len(all_cam_data) == 0:
-                continue
-            cam_data = all_cam_data[0] # assuming only one human
-            for j in cam_data:
-                if cam_data[j][3] > 0.5:
-                    if not j in joints_data.keys():
-                        joints_data[j] = {}
-                    joints_data[j][cam] = [cam_data[j][1], cam_data[j][2]]
+        input_all = inputs #torch.tensor(inputs)
+        output_all = self.mlp(input_all.to(device))
 
-        result3D = triangulate(joints_data, cam_matrix, distortion_coefficients, projection_matrices, fisheye, parameters.axes_3D['Y'][0], parameters)
+        result3D = torch.squeeze(output_all[0])
+        result3D = result3D.reshape((-1,3)).to('cpu')
+        
+        # print(result3D.shape)
+
 
         number_of_joints = len(parameters.joint_list)
         x3D = np.zeros(number_of_joints)
@@ -153,11 +161,9 @@ class Visualizer(object):
         z3D = np.zeros(number_of_joints)
 
         for j in parameters.used_joints:
-            idx = str(j)
-            if idx in result3D:
-                x3D[j] = result3D[idx][self.axes_3D['X'][0]][0]*self.axes_3D['X'][1]
-                y3D[j] = result3D[idx][self.axes_3D['Y'][0]][0]*self.axes_3D['Y'][1]
-                z3D[j] = result3D[idx][self.axes_3D['Z'][0]][0]*self.axes_3D['Z'][1]
+            x3D[j] = result3D[j][self.axes_3D['X'][0]]*self.axes_3D['X'][1]
+            y3D[j] = result3D[j][self.axes_3D['Y'][0]]*self.axes_3D['Y'][1]
+            z3D[j] = result3D[j][self.axes_3D['Z'][0]]*self.axes_3D['Z'][1]
 
         lines = []
         points = []
@@ -169,24 +175,20 @@ class Visualizer(object):
             line_x3D = []
             line_y3D = []
             line_z3D = []
-            if str(skeleton[idx][0]-1) in result3D.keys() and str(skeleton[idx][1]-1) in result3D.keys():
-                if skeleton[idx][0]-1 in parameters.used_joints and skeleton[idx][1]-1 in parameters.used_joints:
-                    line_x3D.append(x3D[skeleton[idx][0]-1])
-                    line_y3D.append(y3D[skeleton[idx][0]-1])
-                    line_z3D.append(z3D[skeleton[idx][0]-1])
-                    line_x3D.append(x3D[skeleton[idx][1]-1])
-                    line_y3D.append(y3D[skeleton[idx][1]-1])
-                    line_z3D.append(z3D[skeleton[idx][1]-1])
-                    lines.append((line_x3D, line_y3D, line_z3D))
-                    lines_pid.append(person_id)
-
-
-
+            if skeleton[idx][0]-1 in parameters.used_joints and skeleton[idx][1]-1 in parameters.used_joints:
+                line_x3D.append(x3D[skeleton[idx][0]-1])
+                line_y3D.append(y3D[skeleton[idx][0]-1])
+                line_z3D.append(z3D[skeleton[idx][0]-1])
+                line_x3D.append(x3D[skeleton[idx][1]-1])
+                line_y3D.append(y3D[skeleton[idx][1]-1])
+                line_z3D.append(z3D[skeleton[idx][1]-1])
+                lines.append((line_x3D, line_y3D, line_z3D))
+                lines_pid.append(person_id)
 
         #
         # Plot the coordinates in 3D
         #
-        for j in result3D.keys():
+        for j in parameters.used_joints:
             p = int(j)
             if p in parameters.used_joints:
                 points.append([x3D[p], y3D[p], z3D[p]])
@@ -196,8 +198,7 @@ class Visualizer(object):
             lines[i] = np.array([[line[0][0].item(), line[1][0].item(), line[2][0].item()],
                             [line[0][1].item(), line[1][1].item(), line[2][1].item()]])
 
-        if len(points)>0:
-            self.update_step(np.array(points), lines, points_pid, lines_pid)
+        self.update_step(np.array(points), lines, points_pid, lines_pid)
 
 
     def start(self):
