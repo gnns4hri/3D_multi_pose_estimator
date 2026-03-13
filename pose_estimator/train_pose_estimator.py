@@ -135,6 +135,7 @@ if __name__ == '__main__':
 
     # Set random number seed
     torch.manual_seed(58008)
+    # torch.manual_seed(12345)
 
     print(f'Final number of dimensions per joint {parameters.numbers_per_joint}')
     print(f'Final number of joints {len(joint_list)}')

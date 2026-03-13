@@ -143,6 +143,8 @@ class Visualizer(object):
                 if cam_data[j][3] > 0.5:
                     if not j in joints_data.keys():
                         joints_data[j] = {}
+                    if cam_data[j][1] > image_size[0] or cam_data[j][2] > image_size[1]:
+                        print('fuera de imagen')
                     joints_data[j][cam] = [cam_data[j][1], cam_data[j][2]]
 
         result3D = triangulate(joints_data, cam_matrix, distortion_coefficients, projection_matrices, fisheye, parameters.axes_3D['Y'][0], parameters)

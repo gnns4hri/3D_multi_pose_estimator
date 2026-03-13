@@ -24,7 +24,7 @@ MAX_COMBINATIONS_NUMBER = 5
 # sys.path.append('../')
 # from parameters import parameters 
 
-from pose_estimator_utils import camera_matrix
+from pose_estimator_utils import camera_matrix, triangulate
 
 
 def build_support_data(parameters):
@@ -81,39 +81,17 @@ def get_3D_from_triangulation(data, skeleton_indices, parameters):
             for j, pos in joints[skeleton_index].items():
                 if j == "ID":
                     continue
-                if pos[0] > 0.:
+                if pos[3] > 0.:
                     if not j in points_2D.keys():
                         points_2D[j] = dict()
                     points_2D[j][cam] = np.array([pos[1], pos[2]])
+    camera_matrices = parameters.temp.camera_matrices
+    distortion_coefficients = parameters.temp.distortion_coefficients
+    projection_matrices = parameters.temp.projection_matrices
+    fisheye = parameters.temp.fisheye
+    median_check_axis = 0
 
-
-    result3D = dict()
-    for idx_i in parameters.joint_list:
-        idx = str(idx_i)
-        mean_point3D = np.zeros((3, 1))
-        if idx in points_2D.keys() and len(points_2D[idx]) > 1:
-            cam_combinations = itertools.combinations(range(len(points_2D[idx].keys())), 2)
-            n_comb = 0
-            for comb in cam_combinations:
-                cam1 = list(points_2D[idx].keys())[comb[0]]
-                cam2 = list(points_2D[idx].keys())[comb[1]]
-                point1 = np.array(points_2D[idx][cam1])
-                if parameters.temp.fisheye[cam1]:
-                    #print(f"{cam1=} {parameters.temp.fisheye[cam1]=}")
-                    new_point1 = cv2.fisheye.undistortPoints(np.array(point1).reshape(1, 1, 2), parameters.temp.camera_matrices[cam1], parameters.temp.distortion_coefficients[cam1])
-                else:
-                    new_point1 = cv2.undistortPoints(np.array([point1]), parameters.temp.camera_matrices[cam1], parameters.temp.distortion_coefficients[cam1])
-                point2 = np.array(points_2D[idx][cam2])
-                if parameters.temp.fisheye[cam2]:
-                    new_point2 = cv2.fisheye.undistortPoints(np.array(point2, dtype=np.float64).reshape(1, 1, 2), parameters.temp.camera_matrices[cam2], parameters.temp.distortion_coefficients[cam2])
-                else:
-                    new_point2 = cv2.undistortPoints(np.array([point2]), parameters.temp.camera_matrices[cam2], parameters.temp.distortion_coefficients[cam2])
-                point3d = cv2.triangulatePoints(parameters.temp.projection_matrices[cam1], parameters.temp.projection_matrices[cam2], new_point1, new_point2)
-                point3d = point3d[0:3]/point3d[3]
-
-                mean_point3D += point3d
-                n_comb += 1
-            result3D[idx] = mean_point3D/n_comb
+    result3D = triangulate(points_2D, camera_matrices, distortion_coefficients, projection_matrices, fisheye, median_check_axis, parameters)
     return result3D
 
 
@@ -301,6 +279,9 @@ class PoseEstimatorDataset(Dataset):
                         output[used_c_offset + j_offset] = values[3]
                         output[used_c_offset + j_offset + 1] = normalize_points[i_point][0] #(values[1] - image_width/2) / (image_width/2) 
                         output[used_c_offset + j_offset + 2] = normalize_points[i_point][1] #(values[2] - image_height/2) / (image_height/2)
+                        # output[used_c_offset + j_offset + 1] = (values[1] - parameters.image_width/2) / (parameters.image_width/2) 
+                        # output[used_c_offset + j_offset + 2] = (values[2] - parameters.image_height/2) / (parameters.image_height/2)
+
                         output[used_c_offset + j_offset + 3] = values[4]
 
                         output[used_c_offset + j_offset + 4: used_c_offset + j_offset + 7] = cam_from_root[0:3]
